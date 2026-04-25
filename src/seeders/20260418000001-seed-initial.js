@@ -1,5 +1,6 @@
 'use strict';
-const bcrypt = require('bcrypt');
+// bcryptjs: implementación pura JS, sin bindings nativos
+const bcrypt = require('bcryptjs');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {

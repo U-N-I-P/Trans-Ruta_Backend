@@ -2,7 +2,7 @@
  * @module services/auth.service
  * @description Lógica de negocio para autenticación
  */
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('../models');
 const env = require('../config/env');

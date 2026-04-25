@@ -2,7 +2,7 @@
  * @module services/usuario.service
  * @description Lógica de negocio para Usuarios
  */
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { Usuario } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
 

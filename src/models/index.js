@@ -20,6 +20,7 @@ const Notificacion = require('./Notificacion');
 const Reporte = require('./Reporte');
 const DocumentoVehicular = require('./DocumentoVehicular');
 const ConsumoCombustible = require('./ConsumoCombustible');
+const GastoViatico = require('./GastoViatico');
 
 // ===== Usuario =====
 Usuario.hasMany(Conductor, { foreignKey: 'usuarioId', as: 'conductores' });
@@ -38,6 +39,11 @@ Cliente.hasMany(Notificacion, { foreignKey: 'clienteId', as: 'notificaciones' })
 
 // ===== Viatico =====
 Viatico.belongsTo(Conductor, { foreignKey: 'conductorId', as: 'conductor' });
+Viatico.belongsTo(OrdenDeDespacho, { foreignKey: 'ordenDeDespachoId', as: 'ordenDeDespacho' });
+Viatico.hasMany(GastoViatico, { foreignKey: 'viaticoId', as: 'gastos' });
+
+// ===== GastoViatico =====
+GastoViatico.belongsTo(Viatico, { foreignKey: 'viaticoId', as: 'viatico' });
 
 // ===== Vehiculo =====
 Vehiculo.hasMany(OrdenDeDespacho, { foreignKey: 'vehiculoId', as: 'ordenesDeDespacho' });
@@ -52,6 +58,7 @@ OrdenDeDespacho.belongsTo(Cliente, { foreignKey: 'clienteId', as: 'cliente' });
 OrdenDeDespacho.hasOne(Entrega, { foreignKey: 'ordenDeDespachoId', as: 'entrega' });
 OrdenDeDespacho.hasMany(Incidente, { foreignKey: 'ordenDeDespachoId', as: 'incidentes' });
 OrdenDeDespacho.hasOne(ConsumoCombustible, { foreignKey: 'ordenDeDespachoId', as: 'consumoCombustible' });
+OrdenDeDespacho.hasMany(Viatico, { foreignKey: 'ordenDeDespachoId', as: 'viaticos' });
 
 // ===== Entrega =====
 Entrega.belongsTo(OrdenDeDespacho, { foreignKey: 'ordenDeDespachoId', as: 'ordenDeDespacho' });
@@ -117,4 +124,5 @@ module.exports = {
   Reporte,
   DocumentoVehicular,
   ConsumoCombustible,
+  GastoViatico,
 };

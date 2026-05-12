@@ -32,6 +32,16 @@ const Viatico = sequelize.define('Viatico', {
     allowNull: false,
     references: { model: 'conductores', key: 'id' },
   },
+  ordenDeDespachoId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'ordenes_de_despacho', key: 'id' },
+  },
+  saldo: {
+    type: DataTypes.DOUBLE,
+    allowNull: false,
+    defaultValue: 0,
+  },
 }, {
   tableName: 'viaticos',
   timestamps: true,

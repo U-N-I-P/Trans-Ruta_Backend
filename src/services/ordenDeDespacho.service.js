@@ -2,7 +2,7 @@
  * @module services/ordenDeDespacho.service
  * @description Lógica de negocio para Órdenes de Despacho
  */
-const { OrdenDeDespacho, Conductor, Vehiculo, Cliente, Entrega } = require('../models');
+const { OrdenDeDespacho, Conductor, Vehiculo, Cliente, Entrega, DocumentoVehicular } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
 
 /**
@@ -72,6 +72,18 @@ async function create(data) {
   }
   if (vehiculo.estado !== 'DISPONIBLE') {
     const err = new Error('El vehículo no está disponible');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Verificar que el vehículo no tenga documentos vencidos (HU-15)
+  const documentos = await DocumentoVehicular.findAll({ where: { vehiculoId: data.vehiculoId } });
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const docsVencidos = documentos.filter(doc => doc.fechaVencimiento < hoyStr);
+  
+  if (docsVencidos.length > 0) {
+    const tiposVencidos = docsVencidos.map(d => d.tipo).join(', ');
+    const err = new Error(`El vehículo tiene documentos vencidos: ${tiposVencidos}. No se puede asignar a una orden.`);
     err.statusCode = 400;
     throw err;
   }

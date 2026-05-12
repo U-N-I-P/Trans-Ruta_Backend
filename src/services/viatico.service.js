@@ -29,6 +29,9 @@ async function findById(id) {
 }
 
 async function create(data) {
+  if (data.monto && data.saldo === undefined) {
+    data.saldo = data.monto;
+  }
   return await Viatico.create(data);
 }
 

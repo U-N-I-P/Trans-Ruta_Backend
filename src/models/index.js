@@ -18,6 +18,9 @@ const Repuesto = require('./Repuesto');
 const SolicitudDeCompra = require('./SolicitudDeCompra');
 const Notificacion = require('./Notificacion');
 const Reporte = require('./Reporte');
+const DocumentoVehicular = require('./DocumentoVehicular');
+const ConsumoCombustible = require('./ConsumoCombustible');
+const GastoViatico = require('./GastoViatico');
 
 // ===== Usuario =====
 Usuario.hasMany(Conductor, { foreignKey: 'usuarioId', as: 'conductores' });
@@ -36,10 +39,17 @@ Cliente.hasMany(Notificacion, { foreignKey: 'clienteId', as: 'notificaciones' })
 
 // ===== Viatico =====
 Viatico.belongsTo(Conductor, { foreignKey: 'conductorId', as: 'conductor' });
+Viatico.belongsTo(OrdenDeDespacho, { foreignKey: 'ordenDeDespachoId', as: 'ordenDeDespacho' });
+Viatico.hasMany(GastoViatico, { foreignKey: 'viaticoId', as: 'gastos' });
+
+// ===== GastoViatico =====
+GastoViatico.belongsTo(Viatico, { foreignKey: 'viaticoId', as: 'viatico' });
 
 // ===== Vehiculo =====
 Vehiculo.hasMany(OrdenDeDespacho, { foreignKey: 'vehiculoId', as: 'ordenesDeDespacho' });
 Vehiculo.hasMany(PlanDeMantenimiento, { foreignKey: 'vehiculoId', as: 'planesDeMantenimiento' });
+Vehiculo.hasMany(DocumentoVehicular, { foreignKey: 'vehiculoId', as: 'documentos' });
+Vehiculo.hasMany(ConsumoCombustible, { foreignKey: 'vehiculoId', as: 'consumosCombustible' });
 
 // ===== OrdenDeDespacho =====
 OrdenDeDespacho.belongsTo(Conductor, { foreignKey: 'conductorId', as: 'conductor' });
@@ -47,6 +57,8 @@ OrdenDeDespacho.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculo' }
 OrdenDeDespacho.belongsTo(Cliente, { foreignKey: 'clienteId', as: 'cliente' });
 OrdenDeDespacho.hasOne(Entrega, { foreignKey: 'ordenDeDespachoId', as: 'entrega' });
 OrdenDeDespacho.hasMany(Incidente, { foreignKey: 'ordenDeDespachoId', as: 'incidentes' });
+OrdenDeDespacho.hasOne(ConsumoCombustible, { foreignKey: 'ordenDeDespachoId', as: 'consumoCombustible' });
+OrdenDeDespacho.hasMany(Viatico, { foreignKey: 'ordenDeDespachoId', as: 'viaticos' });
 
 // ===== Entrega =====
 Entrega.belongsTo(OrdenDeDespacho, { foreignKey: 'ordenDeDespachoId', as: 'ordenDeDespacho' });
@@ -72,6 +84,13 @@ Notificacion.belongsTo(Cliente, { foreignKey: 'clienteId', as: 'cliente' });
 
 // ===== Reporte =====
 Reporte.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
+
+// ===== DocumentoVehicular =====
+DocumentoVehicular.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculo' });
+
+// ===== ConsumoCombustible =====
+ConsumoCombustible.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculo' });
+ConsumoCombustible.belongsTo(OrdenDeDespacho, { foreignKey: 'ordenDeDespachoId', as: 'ordenDeDespacho' });
 
 // ===== ManyToMany: OrdenDeTrabajo ↔ PlanDeMantenimiento =====
 OrdenDeTrabajo.belongsToMany(PlanDeMantenimiento, {
@@ -103,4 +122,7 @@ module.exports = {
   SolicitudDeCompra,
   Notificacion,
   Reporte,
+  DocumentoVehicular,
+  ConsumoCombustible,
+  GastoViatico,
 };

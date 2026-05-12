@@ -4,10 +4,21 @@
  */
 const authService = require('../services/auth.service');
 const { success } = require('../utils/response.helper');
+const { getClientIp } = require('../utils/audit.util');
+const { registrarAuditoria } = require('../services/auditoria.service');
 
 async function login(req, res, next) {
   try {
     const data = await authService.login(req.body.correo, req.body.contrasena);
+    await registrarAuditoria({
+      usuarioId: data.usuario.id,
+      ipAddress: getClientIp(req),
+      accion: 'LOGIN',
+      entidad: 'Sesion',
+      entidadId: data.usuario.id,
+      datosAnteriores: null,
+      datosNuevos: { correo: data.usuario.correo, rol: data.usuario.rol },
+    });
     return success(res, 'Inicio de sesión exitoso', data);
   } catch (err) { next(err); }
 }

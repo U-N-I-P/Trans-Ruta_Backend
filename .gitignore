@@ -2,3 +2,9 @@ node_modules/
 .env
 *.log
 .kiro/
+
+# Documentación interna / prompts (no versionar)
+COMO_USAR_PROMPTS.md
+GUIA_RAPIDA_DESARROLLO.md
+PROMPTS_PARA_AGENTE.md
+RESUMEN_CAMBIOS_COMPANERA.md

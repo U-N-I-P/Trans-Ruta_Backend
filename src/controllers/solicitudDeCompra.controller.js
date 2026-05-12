@@ -3,6 +3,7 @@
  */
 const service = require('../services/solicitudDeCompra.service');
 const { success } = require('../utils/response.helper');
+const { buildAuditContext } = require('../utils/audit.util');
 
 async function findAll(req, res, next) {
   try {
@@ -20,21 +21,21 @@ async function findById(req, res, next) {
 
 async function crearPorRepuesto(req, res, next) {
   try {
-    const data = await service.crearPorRepuesto(req.params.repuestoId, req.body);
+    const data = await service.crearPorRepuesto(req.params.repuestoId, req.body, buildAuditContext(req));
     return success(res, 'Solicitud de compra creada', data, 201);
   } catch (err) { next(err); }
 }
 
 async function update(req, res, next) {
   try {
-    const data = await service.update(req.params.id, req.body);
+    const data = await service.update(req.params.id, req.body, buildAuditContext(req));
     return success(res, 'Solicitud de compra actualizada', data);
   } catch (err) { next(err); }
 }
 
 async function remove(req, res, next) {
   try {
-    await service.remove(req.params.id);
+    await service.remove(req.params.id, buildAuditContext(req));
     return success(res, 'Solicitud de compra eliminada');
   } catch (err) { next(err); }
 }

@@ -4,6 +4,7 @@
  */
 const { SolicitudDeCompra, Repuesto } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
+const { registrarAuditoria } = require('./auditoria.service');
 
 async function findAll(query) {
   const { page, limit, offset } = getPagination(query);
@@ -34,7 +35,7 @@ async function findById(id) {
  * @param {object} data
  * @returns {Promise<object>}
  */
-async function crearPorRepuesto(repuestoId, data) {
+async function crearPorRepuesto(repuestoId, data, auditCtx) {
   const repuesto = await Repuesto.findByPk(repuestoId);
   if (!repuesto) {
     const err = new Error('Repuesto no encontrado');
@@ -43,17 +44,61 @@ async function crearPorRepuesto(repuestoId, data) {
   }
   data.repuestoId = repuestoId;
   data.fecha = data.fecha || new Date().toISOString().split('T')[0];
-  return await SolicitudDeCompra.create(data);
-}
-
-async function update(id, data) {
-  const sol = await findById(id);
-  await sol.update(data);
+  const sol = await SolicitudDeCompra.create(data);
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'CREATE',
+      entidad: 'SolicitudDeCompra',
+      entidadId: sol.id,
+      datosAnteriores: null,
+      datosNuevos: sol.get({ plain: true }),
+    });
+  }
   return sol;
 }
 
-async function remove(id) {
+async function update(id, data, auditCtx) {
   const sol = await findById(id);
+  const antes = sol.get({ plain: true });
+  await sol.update(data);
+  await sol.reload();
+  const despues = sol.get({ plain: true });
+
+  if (auditCtx) {
+    let accion = 'UPDATE';
+    if (despues.estado === 'APROBADA' && antes.estado !== 'APROBADA') accion = 'APPROVE';
+    else if (despues.estado === 'RECHAZADA' && antes.estado !== 'RECHAZADA') accion = 'REJECT';
+
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion,
+      entidad: 'SolicitudDeCompra',
+      entidadId: sol.id,
+      datosAnteriores: accion === 'UPDATE' ? antes : null,
+      datosNuevos: { ...despues, estadoAnterior: antes.estado },
+    });
+  }
+
+  return sol;
+}
+
+async function remove(id, auditCtx) {
+  const sol = await findById(id);
+  const snapshot = sol.get({ plain: true });
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'DELETE',
+      entidad: 'SolicitudDeCompra',
+      entidadId: sol.id,
+      datosAnteriores: null,
+      datosNuevos: snapshot,
+    });
+  }
   await sol.destroy();
 }
 

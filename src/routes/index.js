@@ -25,5 +25,6 @@ router.use('/manifiestos', require('./manifiesto.routes'));
 router.use('/documentos-vehiculares', require('./documentoVehicular.routes'));
 router.use('/consumos-combustible', require('./consumoCombustible.routes'));
 router.use('/gastos-viaticos', require('./gastoViatico.routes'));
+router.use('/auditoria', require('./auditoria.routes'));
 
 module.exports = router;

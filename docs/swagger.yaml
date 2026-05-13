@@ -1,0 +1,1231 @@
+openapi: 3.0.0
+info:
+  title: Trans-Ruta API
+  version: 1.0.0
+  description: API RESTful para el sistema de gestión logística y transporte de carga Trans-Ruta
+  contact:
+    name: Equipo Backend Trans-Ruta
+    email: backend@trans-ruta.com
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Servidor de Desarrollo
+  - url: https://api.trans-ruta.com/api/v1
+    description: Servidor de Producción
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Ingrese el token JWT obtenido del endpoint /auth/login
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operación realizada con éxito
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error en la operación
+        errors:
+          type: array
+          items:
+            type: object
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Autenticación
+    description: Endpoints de autenticación y registro
+  - name: Documentos Vehiculares
+    description: Gestión de documentos de vehículos (HU-15)
+  - name: Consumo de Combustible
+    description: Registro y seguimiento de consumo de combustible (HU-16)
+  - name: Viáticos y Gastos
+    description: Gestión de viáticos y gastos de conductores (HU-17)
+  - name: Auditoría
+    description: Consulta de logs de auditoría del sistema (HU-18)
+  - name: Solicitudes de Compra
+    description: Gestión de solicitudes de compra con flujo de aprobación (HU-19)
+  - name: Sugerencias
+    description: Sistema inteligente de sugerencias de asignación (HU-20)
+  - name: Evaluaciones
+    description: Sistema de evaluación de desempeño de conductores (HU-21)
+
+paths:
+  # ==================== AUTENTICACIÓN ====================
+  /auth/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Iniciar sesión
+      description: |
+        Autentica un usuario y devuelve un token JWT.
+        
+        **IMPORTANTE**: El token se guarda automáticamente en localStorage y se aplica a todas las peticiones.
+        No necesitas copiar y pegar el token manualmente.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - correo
+                - contrasena
+              properties:
+                correo:
+                  type: string
+                  format: email
+                  example: admin@trans-ruta.com
+                  description: Correo electrónico del usuario
+                contrasena:
+                  type: string
+                  format: password
+                  example: Admin123!
+                  description: Contraseña del usuario
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Inicio de sesión exitoso
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                        description: Token JWT (se guarda automáticamente)
+                      usuario:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          nombre:
+                            type: string
+                            example: Juan Pérez
+                          correo:
+                            type: string
+                            example: admin@trans-ruta.com
+                          rol:
+                            type: string
+                            enum: [ADMINISTRADOR, DESPACHADOR, CONDUCTOR, JEFE_TALLER, GESTOR_INVENTARIO, AUDITOR]
+                            example: ADMINISTRADOR
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Correo o contraseña incorrectos
+
+  /auth/logout:
+    post:
+      tags:
+        - Autenticación
+      summary: Cerrar sesión
+      description: |
+        Cierra la sesión del usuario actual y registra el evento en auditoría.
+        
+        **IMPORTANTE**: El token se elimina automáticamente de localStorage.
+      responses:
+        '200':
+          description: Sesión cerrada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Sesión cerrada exitosamente
+                  data:
+                    type: object
+                    nullable: true
+                    example: null
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Autenticación
+      summary: Obtener usuario autenticado
+      description: Devuelve la información del usuario actualmente autenticado
+      responses:
+        '200':
+          description: Usuario obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Usuario autenticado
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      nombre:
+                        type: string
+                      correo:
+                        type: string
+                      rol:
+                        type: string
+        '401':
+          description: No autenticado
+
+  /auth/refresh:
+    post:
+      tags:
+        - Autenticación
+      summary: Refrescar token
+      description: Genera un nuevo token JWT para el usuario autenticado
+      responses:
+        '200':
+          description: Token refrescado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+
+  # ==================== DOCUMENTOS VEHICULARES (HU-15) ====================
+  /documentos-vehiculares/alertas:
+    get:
+      tags:
+        - Documentos Vehiculares
+      summary: Obtener alertas de documentos por vencer
+      description: Devuelve documentos que vencen en los próximos 30 días con nivel de alerta
+      responses:
+        '200':
+          description: Alertas obtenidas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Alertas de vencimiento obtenidas
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 5
+                        vehiculoId:
+                          type: integer
+                          example: 2
+                        placa:
+                          type: string
+                          example: TRK-900
+                        tipo:
+                          type: string
+                          enum: [SOAT, TECNOMECANICA, REVISION_GASES, POLIZA, TARJETA_OPERACION]
+                          example: SOAT
+                        fechaVencimiento:
+                          type: string
+                          format: date
+                          example: '2026-05-20'
+                        diasFaltantes:
+                          type: integer
+                          example: 8
+                        nivelAlerta:
+                          type: string
+                          enum: [INFO, ALERTA, CRITICO]
+                          example: ALERTA
+                          description: CRITICO (≤7 días), ALERTA (≤15 días), INFO (≤30 días)
+
+  /documentos-vehiculares:
+    get:
+      tags:
+        - Documentos Vehiculares
+      summary: Listar documentos vehiculares
+      description: Obtiene lista paginada de documentos vehiculares
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: vehiculoId
+          schema:
+            type: integer
+          description: Filtrar por vehículo específico
+      responses:
+        '200':
+          description: Documentos obtenidos exitosamente
+
+    post:
+      tags:
+        - Documentos Vehiculares
+      summary: Crear documento vehicular
+      description: Registra un nuevo documento para un vehículo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tipo
+                - numero
+                - fechaExpedicion
+                - fechaVencimiento
+                - vehiculoId
+              properties:
+                tipo:
+                  type: string
+                  enum: [SOAT, TECNOMECANICA, REVISION_GASES, POLIZA, TARJETA_OPERACION]
+                  example: SOAT
+                numero:
+                  type: string
+                  example: '888999'
+                fechaExpedicion:
+                  type: string
+                  format: date
+                  example: '2025-05-10'
+                fechaVencimiento:
+                  type: string
+                  format: date
+                  example: '2026-05-10'
+                archivoAdjunto:
+                  type: string
+                  example: https://storage.trans-ruta.com/docs/soat-888999.pdf
+                vehiculoId:
+                  type: integer
+                  example: 2
+      responses:
+        '201':
+          description: Documento creado exitosamente
+
+  /documentos-vehiculares/{id}:
+    get:
+      tags:
+        - Documentos Vehiculares
+      summary: Obtener documento por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Documento obtenido
+        '404':
+          description: Documento no encontrado
+
+    put:
+      tags:
+        - Documentos Vehiculares
+      summary: Actualizar documento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Documento actualizado
+
+    delete:
+      tags:
+        - Documentos Vehiculares
+      summary: Eliminar documento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Documento eliminado
+
+  # ==================== CONSUMO DE COMBUSTIBLE (HU-16) ====================
+  /consumos-combustible:
+    get:
+      tags:
+        - Consumo de Combustible
+      summary: Listar registros de consumo
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Registros obtenidos
+
+    post:
+      tags:
+        - Consumo de Combustible
+      summary: Registrar consumo de combustible
+      description: |
+        Registra una carga de combustible. El sistema calcula automáticamente:
+        - Distancia recorrida (kilometrajeFinal - kilometrajeInicial)
+        - Rendimiento (Km/L)
+        - Genera alerta si el rendimiento es 20% menor al promedio histórico
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - kilometrajeInicial
+                - kilometrajeFinal
+                - litrosCargados
+                - costoTotal
+                - ordenDeDespachoId
+              properties:
+                kilometrajeInicial:
+                  type: number
+                  format: double
+                  example: 120000
+                kilometrajeFinal:
+                  type: number
+                  format: double
+                  example: 120500
+                litrosCargados:
+                  type: number
+                  format: double
+                  example: 85.0
+                costoTotal:
+                  type: number
+                  format: double
+                  example: 320000
+                ordenDeDespachoId:
+                  type: integer
+                  example: 5
+                evidenciaFotografica:
+                  type: string
+                  example: https://storage.trans-ruta.com/evidencias/ticket-123.jpg
+      responses:
+        '201':
+          description: Consumo registrado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Registro de consumo creado (ALERTA Rendimiento 20% por debajo del promedio)
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      rendimiento:
+                        type: number
+                        description: Calculado automáticamente (Km/L)
+                      distanciaRecorrida:
+                        type: number
+                        description: Calculado automáticamente
+                      vehiculoId:
+                        type: integer
+
+  /consumos-combustible/vehiculo/{vehiculoId}:
+    get:
+      tags:
+        - Consumo de Combustible
+      summary: Obtener historial de consumo por vehículo
+      description: Útil para gráficas de rendimiento en el tiempo
+      parameters:
+        - in: path
+          name: vehiculoId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Historial obtenido
+
+  # ==================== VIÁTICOS Y GASTOS (HU-17) ====================
+  /gastos-viaticos:
+    post:
+      tags:
+        - Viáticos y Gastos
+      summary: Registrar gasto de viático
+      description: El conductor registra un gasto individual (estado PENDIENTE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - viaticoId
+                - monto
+                - categoria
+              properties:
+                viaticoId:
+                  type: integer
+                  example: 1
+                monto:
+                  type: number
+                  format: double
+                  example: 25000
+                categoria:
+                  type: string
+                  enum: [COMBUSTIBLE, PEAJES, ALIMENTACION, HOSPEDAJE, OTROS]
+                  example: PEAJES
+                descripcion:
+                  type: string
+                  example: Peaje Bogotá
+                evidenciaFotografica:
+                  type: string
+                  example: https://url-del-ticket.jpg
+      responses:
+        '201':
+          description: Gasto registrado correctamente
+
+  /gastos-viaticos/viatico/{viaticoId}:
+    get:
+      tags:
+        - Viáticos y Gastos
+      summary: Obtener gastos de un viático
+      parameters:
+        - in: path
+          name: viaticoId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Gastos obtenidos
+
+  /gastos-viaticos/{id}/aprobar:
+    patch:
+      tags:
+        - Viáticos y Gastos
+      summary: Aprobar gasto
+      description: |
+        El administrador aprueba el gasto. El sistema:
+        - Actualiza el saldo del viático automáticamente
+        - Genera alerta si el saldo es < 10% del monto o negativo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comentariosAdmin:
+                  type: string
+                  example: Todo en orden
+      responses:
+        '200':
+          description: Gasto aprobado correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Gasto aprobado correctamente (ALERTA Saldo menor al 10% del monto o negativo)
+
+  /gastos-viaticos/{id}/rechazar:
+    patch:
+      tags:
+        - Viáticos y Gastos
+      summary: Rechazar gasto
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comentariosAdmin
+              properties:
+                comentariosAdmin:
+                  type: string
+                  example: Gasto no justificado
+      responses:
+        '200':
+          description: Gasto rechazado
+
+  # ==================== AUDITORÍA (HU-18) ====================
+  /auditoria:
+    get:
+      tags:
+        - Auditoría
+      summary: Listar logs de auditoría
+      description: Solo accesible para ADMINISTRADOR y AUDITOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: usuarioId
+          schema:
+            type: integer
+          description: Filtrar por usuario
+        - in: query
+          name: accion
+          schema:
+            type: string
+            enum: [CREATE, UPDATE, DELETE, APPROVE, REJECT, ASSIGN, LOGIN, LOGOUT]
+          description: Filtrar por tipo de acción
+        - in: query
+          name: entidad
+          schema:
+            type: string
+          description: Filtrar por entidad (ej SolicitudDeCompra)
+        - in: query
+          name: fechaInicio
+          schema:
+            type: string
+            format: date
+          description: Fecha inicio (YYYY-MM-DD)
+        - in: query
+          name: fechaFin
+          schema:
+            type: string
+            format: date
+          description: Fecha fin (YYYY-MM-DD)
+      responses:
+        '200':
+          description: Registros de auditoría obtenidos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        usuario:
+                          type: object
+                        accion:
+                          type: string
+                        entidad:
+                          type: string
+                        entidadId:
+                          type: integer
+                        ipAddress:
+                          type: string
+                        datosAnteriores:
+                          type: object
+                        datosNuevos:
+                          type: object
+                        createdAt:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+
+  /auditoria/{id}:
+    get:
+      tags:
+        - Auditoría
+      summary: Ver detalle de un log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Log obtenido
+
+  /auditoria/exportar:
+    get:
+      tags:
+        - Auditoría
+      summary: Exportar auditoría
+      description: Exporta logs en formato CSV o PDF
+      parameters:
+        - in: query
+          name: formato
+          required: true
+          schema:
+            type: string
+            enum: [csv, pdf]
+          description: csv (hasta 2000 registros) o pdf (hasta 400 registros)
+        - in: query
+          name: fechaInicio
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: fechaFin
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Archivo descargable
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  # ==================== SOLICITUDES DE COMPRA (HU-19) ====================
+  /solicitudes-compra/pendientes:
+    get:
+      tags:
+        - Solicitudes de Compra
+      summary: Listar solicitudes pendientes de aprobación
+      description: Solo ADMINISTRADOR. Devuelve solicitudes con monto > $500,000
+      responses:
+        '200':
+          description: Solicitudes pendientes obtenidas
+
+  /solicitudes-compra/{repuestoId}:
+    post:
+      tags:
+        - Solicitudes de Compra
+      summary: Crear solicitud de compra
+      description: |
+        Crea una solicitud de compra. El sistema:
+        - Calcula el monto total automáticamente (cantidad * costoEstimado)
+        - Si monto ≤ $500,000 → APROBADA automáticamente
+        - Si monto > $500,000 → PENDIENTE (requiere aprobación manual)
+      parameters:
+        - in: path
+          name: repuestoId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cantidad
+                - costoEstimado
+              properties:
+                cantidad:
+                  type: integer
+                  example: 5
+                costoEstimado:
+                  type: number
+                  format: double
+                  example: 450000
+                descripcion:
+                  type: string
+                  example: Filtros de aceite para mantenimiento preventivo
+      responses:
+        '201':
+          description: Solicitud creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      estado:
+                        type: string
+                        example: APROBADA
+                        description: APROBADA (automática) o PENDIENTE (requiere aprobación)
+                      montoTotal:
+                        type: number
+                      comentariosAprobacion:
+                        type: string
+
+  /solicitudes-compra/{id}/aprobar:
+    patch:
+      tags:
+        - Solicitudes de Compra
+      summary: Aprobar solicitud
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comentarios:
+                  type: string
+                  example: Aprobado por necesidad urgente
+      responses:
+        '200':
+          description: Solicitud aprobada
+
+  /solicitudes-compra/{id}/rechazar:
+    patch:
+      tags:
+        - Solicitudes de Compra
+      summary: Rechazar solicitud
+      description: Solo ADMINISTRADOR. Comentarios obligatorios
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comentarios
+              properties:
+                comentarios:
+                  type: string
+                  example: Presupuesto insuficiente este mes
+      responses:
+        '200':
+          description: Solicitud rechazada
+
+  /solicitudes-compra/{id}/recibir:
+    patch:
+      tags:
+        - Solicitudes de Compra
+      summary: Registrar recepción de repuestos
+      description: |
+        Solo GESTOR_INVENTARIO o ADMINISTRADOR.
+        Al registrar la recepción, el inventario se actualiza automáticamente.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recepción registrada, inventario actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      estado:
+                        type: string
+                        example: RECIBIDA
+                      fechaRecepcion:
+                        type: string
+                        format: date-time
+                      repuesto:
+                        type: object
+                        properties:
+                          stockActual:
+                            type: integer
+                            description: Actualizado automáticamente
+
+  # ==================== SUGERENCIAS (HU-20) ====================
+  /sugerencias:
+    get:
+      tags:
+        - Sugerencias
+      summary: Obtener sugerencias de asignación
+      description: |
+        Solo ADMINISTRADOR y DESPACHADOR.
+        Sistema inteligente que sugiere las mejores combinaciones vehículo-conductor basado en:
+        - Capacidad de carga óptima
+        - Estado del vehículo y documentos vigentes
+        - Licencia y categoría del conductor
+        - Descanso del conductor (mínimo 8 horas)
+        - Experiencia en la ruta
+        - Historial de incidentes
+      parameters:
+        - in: query
+          name: pesoCarga
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Peso de la carga en kg
+          example: 12000
+        - in: query
+          name: origen
+          required: true
+          schema:
+            type: string
+          description: Ciudad de origen (3-200 caracteres)
+          example: Bogotá
+        - in: query
+          name: destino
+          required: true
+          schema:
+            type: string
+          description: Ciudad de destino (3-200 caracteres)
+          example: Medellín
+        - in: query
+          name: limite
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+          description: Número de sugerencias a retornar
+      responses:
+        '200':
+          description: Sugerencias obtenidas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        vehiculo:
+                          type: object
+                        conductor:
+                          type: object
+                        scoreVehiculo:
+                          type: integer
+                          description: Score del vehículo (0-100)
+                        scoreConductor:
+                          type: integer
+                          description: Score del conductor (0-100)
+                        scoreCombinado:
+                          type: integer
+                          description: Score combinado (60% vehículo + 40% conductor)
+                        detallesVehiculo:
+                          type: array
+                          items:
+                            type: string
+                        detallesConductor:
+                          type: array
+                          items:
+                            type: string
+                        justificacion:
+                          type: string
+        '400':
+          description: Parámetros inválidos
+
+  # ==================== EVALUACIONES (HU-21) ====================
+  /evaluaciones/generar:
+    post:
+      tags:
+        - Evaluaciones
+      summary: Generar evaluaciones mensuales
+      description: |
+        Solo ADMINISTRADOR.
+        Genera evaluaciones para todos los conductores de un periodo.
+        Sistema de scoring:
+        - Puntualidad (30%): Entregas a tiempo vs total
+        - Incidentes (25%): 0 incidentes = 25 pts, escala descendente
+        - Combustible (20%): Comparado con promedio del tipo de vehículo
+        - Calificación clientes (15%): Reservado para implementación futura
+        - Cumplimiento protocolos (10%): Entregas con firma digital
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - periodo
+              properties:
+                periodo:
+                  type: string
+                  pattern: ^\d{4}-\d{2}$
+                  example: '2026-05'
+                  description: Formato YYYY-MM
+      responses:
+        '201':
+          description: Evaluaciones generadas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      evaluaciones:
+                        type: array
+                      errores:
+                        type: array
+                      resumen:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          exitosas:
+                            type: integer
+                          fallidas:
+                            type: integer
+
+  /evaluaciones/ranking:
+    get:
+      tags:
+        - Evaluaciones
+      summary: Obtener ranking de conductores
+      description: Solo ADMINISTRADOR. Útil para tabla de posiciones
+      parameters:
+        - in: query
+          name: periodo
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}$
+          example: '2026-05'
+      responses:
+        '200':
+          description: Ranking obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        posicion:
+                          type: integer
+                        conductor:
+                          type: object
+                        scoreTotal:
+                          type: number
+                        entregasTotales:
+                          type: integer
+                        entregasATiempo:
+                          type: integer
+                        incidentesTotales:
+                          type: integer
+                        rendimientoPromedio:
+                          type: number
+                        porcentajePuntualidad:
+                          type: integer
+
+  /evaluaciones/conductor/{conductorId}/{periodo}:
+    get:
+      tags:
+        - Evaluaciones
+      summary: Ver evaluación de un conductor
+      description: ADMINISTRADOR puede ver cualquiera. CONDUCTOR solo la suya.
+      parameters:
+        - in: path
+          name: conductorId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: periodo
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{4}-\d{2}$
+          example: '2026-05'
+      responses:
+        '200':
+          description: Evaluación obtenida exitosamente
+        '403':
+          description: No tienes permiso para ver esta evaluación
+        '404':
+          description: Evaluación no encontrada
+
+  /evaluaciones/conductor/{conductorId}/historial:
+    get:
+      tags:
+        - Evaluaciones
+      summary: Ver historial de evaluaciones
+      description: ADMINISTRADOR puede ver cualquiera. CONDUCTOR solo el suyo. Útil para gráficas de evolución.
+      parameters:
+        - in: path
+          name: conductorId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: limite
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 12
+          description: Número de evaluaciones a retornar
+      responses:
+        '200':
+          description: Historial obtenido exitosamente
+
+  /evaluaciones/{id}/comentarios:
+    patch:
+      tags:
+        - Evaluaciones
+      summary: Agregar comentarios del administrador
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comentarios
+              properties:
+                comentarios:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+                  example: Excelente desempeño este mes. Mantener el nivel.
+      responses:
+        '200':
+          description: Comentarios agregados exitosamente

@@ -37,4 +37,19 @@ async function me(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { login, refresh, me };
+async function logout(req, res, next) {
+  try {
+    await registrarAuditoria({
+      usuarioId: req.user.id,
+      ipAddress: getClientIp(req),
+      accion: 'LOGOUT',
+      entidad: 'Sesion',
+      entidadId: req.user.id,
+      datosAnteriores: null,
+      datosNuevos: { correo: req.user.correo, rol: req.user.rol },
+    });
+    return success(res, 'Sesión cerrada exitosamente', null);
+  } catch (err) { next(err); }
+}
+
+module.exports = { login, refresh, me, logout };

@@ -54,6 +54,30 @@ security:
 tags:
   - name: Autenticación
     description: Endpoints de autenticación y registro
+  - name: Usuarios
+    description: Gestión de usuarios del sistema (solo ADMINISTRADOR)
+  - name: Vehículos
+    description: Gestión de flota vehicular (HU-01)
+  - name: Conductores
+    description: Gestión de conductores y licencias
+  - name: Viáticos
+    description: Asignación de presupuesto de viáticos a viajes (HU-10, HU-11)
+  - name: Órdenes de Despacho
+    description: Planificación y despacho de viajes (HU-03 a HU-05)
+  - name: Entregas
+    description: Registro de entregas con firma digital (HU-06 a HU-08)
+  - name: Incidentes
+    description: Reporte de incidentes en ruta (HU-09)
+  - name: Planes de Mantenimiento
+    description: Planificación de mantenimiento preventivo y correctivo (HU-02)
+  - name: Órdenes de Trabajo
+    description: Gestión de órdenes de trabajo de taller (HU-02)
+  - name: Repuestos
+    description: Gestión de inventario de repuestos (HU-12)
+  - name: Reportes
+    description: Generación de reportes analíticos (HU-14)
+  - name: Manifiestos
+    description: Generación de manifiestos de carga (HU-04)
   - name: Clientes
     description: Gestión de clientes y consulta de envíos (HU-13)
   - name: Notificaciones
@@ -104,7 +128,7 @@ paths:
                 contrasena:
                   type: string
                   format: password
-                  example: Admin123!
+                  example: Admin1234!
                   description: Contraseña del usuario
       responses:
         '200':
@@ -254,6 +278,910 @@ paths:
                     properties:
                       token:
                         type: string
+
+  # ==================== USUARIOS ====================
+  /usuarios:
+    get:
+      tags:
+        - Usuarios
+      summary: Listar usuarios
+      description: Solo ADMINISTRADOR. Obtiene lista paginada de usuarios.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Usuarios obtenidos exitosamente
+
+    post:
+      tags:
+        - Usuarios
+      summary: Crear usuario
+      description: |
+        Solo ADMINISTRADOR. No hay registro público — los usuarios se crean desde este endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nombre
+                - correo
+                - contrasena
+                - rol
+              properties:
+                nombre:
+                  type: string
+                  example: María García
+                correo:
+                  type: string
+                  format: email
+                  example: maria@trans-ruta.com
+                contrasena:
+                  type: string
+                  format: password
+                  example: Secure123!
+                  description: Mínimo 8 caracteres
+                rol:
+                  type: string
+                  enum: [ADMINISTRADOR, DESPACHADOR, CONDUCTOR, CLIENTE, JEFE_TALLER, GESTOR_INVENTARIO, AUDITOR]
+                  example: DESPACHADOR
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+        '400':
+          description: Datos de entrada inválidos
+
+  /usuarios/{id}:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener usuario por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Usuario obtenido
+        '404':
+          description: Usuario no encontrado
+
+    put:
+      tags:
+        - Usuarios
+      summary: Actualizar usuario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                correo:
+                  type: string
+                  format: email
+                contrasena:
+                  type: string
+                  format: password
+                rol:
+                  type: string
+                  enum: [ADMINISTRADOR, DESPACHADOR, CONDUCTOR, CLIENTE, JEFE_TALLER, GESTOR_INVENTARIO, AUDITOR]
+      responses:
+        '200':
+          description: Usuario actualizado
+
+    delete:
+      tags:
+        - Usuarios
+      summary: Eliminar usuario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Usuario eliminado
+
+  # ==================== VEHÍCULOS (HU-01) ====================
+  /vehiculos:
+    get:
+      tags:
+        - Vehículos
+      summary: Listar vehículos
+      description: Accesible por ADMINISTRADOR, DESPACHADOR y JEFE_TALLER
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Vehículos obtenidos exitosamente
+
+    post:
+      tags:
+        - Vehículos
+      summary: Crear vehículo
+      description: Solo ADMINISTRADOR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - placa
+                - tipo
+                - capacidadCarga
+                - estado
+              properties:
+                placa:
+                  type: string
+                  example: TRK-900
+                  description: Formato colombiano (ABC-123 o AB-1234)
+                tipo:
+                  type: string
+                  enum: [CAMION_CARGA_PESADA, TURBO, CAMIONETA]
+                  example: CAMION_CARGA_PESADA
+                capacidadCarga:
+                  type: number
+                  format: double
+                  example: 15000
+                  description: Capacidad en kg (debe ser > 0)
+                estado:
+                  type: string
+                  enum: [DISPONIBLE, EN_RUTA, EN_MANTENIMIENTO, FUERA_DE_SERVICIO]
+                  example: DISPONIBLE
+      responses:
+        '201':
+          description: Vehículo creado exitosamente
+        '400':
+          description: Datos de entrada inválidos
+
+  /vehiculos/{id}:
+    get:
+      tags:
+        - Vehículos
+      summary: Obtener vehículo por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vehículo obtenido
+        '404':
+          description: Vehículo no encontrado
+
+    put:
+      tags:
+        - Vehículos
+      summary: Actualizar vehículo
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                placa:
+                  type: string
+                tipo:
+                  type: string
+                  enum: [CAMION_CARGA_PESADA, TURBO, CAMIONETA]
+                capacidadCarga:
+                  type: number
+                  format: double
+                estado:
+                  type: string
+                  enum: [DISPONIBLE, EN_RUTA, EN_MANTENIMIENTO, FUERA_DE_SERVICIO]
+      responses:
+        '200':
+          description: Vehículo actualizado
+
+    delete:
+      tags:
+        - Vehículos
+      summary: Eliminar vehículo
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vehículo eliminado
+
+  # ==================== CONDUCTORES ====================
+  /conductores/licencias-por-vencer:
+    get:
+      tags:
+        - Conductores
+      summary: Listar conductores con licencias por vencer
+      description: Accesible por ADMINISTRADOR y DESPACHADOR. Devuelve conductores cuya licencia está próxima a vencer.
+      responses:
+        '200':
+          description: Conductores con licencias por vencer obtenidos
+
+  /conductores:
+    get:
+      tags:
+        - Conductores
+      summary: Listar conductores
+      description: Accesible por ADMINISTRADOR y DESPACHADOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Conductores obtenidos exitosamente
+
+    post:
+      tags:
+        - Conductores
+      summary: Crear conductor
+      description: Solo ADMINISTRADOR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nombre
+                - apellido
+                - cedula
+                - numeroLicencia
+                - categoriaLicencia
+                - fechaVencimientoLicencia
+              properties:
+                nombre:
+                  type: string
+                  example: Carlos
+                apellido:
+                  type: string
+                  example: Rodríguez
+                cedula:
+                  type: string
+                  example: '1234567890'
+                  description: Debe ser numérica
+                numeroLicencia:
+                  type: string
+                  example: '12345678'
+                categoriaLicencia:
+                  type: string
+                  enum: [B1, B2, C1, C2, C3]
+                  example: C2
+                fechaVencimientoLicencia:
+                  type: string
+                  format: date
+                  example: '2027-12-31'
+                  description: Debe ser fecha futura
+                usuarioId:
+                  type: integer
+                  example: 5
+                  description: ID del usuario asociado al conductor
+      responses:
+        '201':
+          description: Conductor creado exitosamente
+        '400':
+          description: Datos de entrada inválidos
+
+  /conductores/{id}:
+    get:
+      tags:
+        - Conductores
+      summary: Obtener conductor por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conductor obtenido
+        '404':
+          description: Conductor no encontrado
+
+    put:
+      tags:
+        - Conductores
+      summary: Actualizar conductor
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                apellido:
+                  type: string
+                cedula:
+                  type: string
+                fechaVencimientoLicencia:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Conductor actualizado
+
+    delete:
+      tags:
+        - Conductores
+      summary: Eliminar conductor
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conductor eliminado
+
+  # ==================== VIÁTICOS (HU-10, HU-11) ====================
+  /viaticos:
+    get:
+      tags:
+        - Viáticos
+      summary: Listar viáticos
+      description: Accesible por ADMINISTRADOR, DESPACHADOR y CONDUCTOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Viáticos obtenidos exitosamente
+
+    post:
+      tags:
+        - Viáticos
+      summary: Asignar viático a un viaje
+      description: Solo ADMINISTRADOR y DESPACHADOR. El monto se convierte automáticamente en el saldo inicial.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - monto
+                - fecha
+                - estado
+                - conductorId
+              properties:
+                monto:
+                  type: number
+                  format: double
+                  example: 500000
+                  description: Monto del viático (debe ser > 0). Será el saldo inicial.
+                fecha:
+                  type: string
+                  format: date
+                  example: '2026-05-13'
+                estado:
+                  type: string
+                  enum: [PENDIENTE, APROBADO, RECHAZADO, PAGADO]
+                  example: APROBADO
+                conductorId:
+                  type: integer
+                  example: 5
+                ordenDeDespachoId:
+                  type: integer
+                  example: 3
+      responses:
+        '201':
+          description: Viático creado exitosamente
+
+  /viaticos/{id}:
+    get:
+      tags:
+        - Viáticos
+      summary: Obtener viático por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Viático obtenido
+        '404':
+          description: Viático no encontrado
+
+    put:
+      tags:
+        - Viáticos
+      summary: Actualizar viático
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                monto:
+                  type: number
+                  format: double
+                fecha:
+                  type: string
+                  format: date
+                estado:
+                  type: string
+                  enum: [PENDIENTE, APROBADO, RECHAZADO, PAGADO]
+      responses:
+        '200':
+          description: Viático actualizado
+
+    delete:
+      tags:
+        - Viáticos
+      summary: Eliminar viático
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Viático eliminado
+
+  # ==================== ÓRDENES DE DESPACHO (HU-03 a HU-05) ====================
+  /ordenes-despacho:
+    get:
+      tags:
+        - Órdenes de Despacho
+      summary: Listar órdenes de despacho
+      description: Accesible por ADMINISTRADOR, DESPACHADOR, CONDUCTOR y AUDITOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Órdenes obtenidas exitosamente
+
+    post:
+      tags:
+        - Órdenes de Despacho
+      summary: Crear orden de despacho
+      description: |
+        Solo DESPACHADOR y ADMINISTRADOR.
+        ⚠️ Si el vehículo tiene documentos vencidos o la carga supera el límite, devuelve Status 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - origen
+                - destino
+                - pesoCarga
+                - conductorId
+                - vehiculoId
+                - clienteId
+              properties:
+                origen:
+                  type: string
+                  example: Bogotá
+                destino:
+                  type: string
+                  example: Medellín
+                pesoCarga:
+                  type: number
+                  format: double
+                  example: 12000
+                  description: Peso en kg (debe ser > 0)
+                descripcionCarga:
+                  type: string
+                  example: Materiales de construcción
+                conductorId:
+                  type: integer
+                  example: 5
+                vehiculoId:
+                  type: integer
+                  example: 2
+                clienteId:
+                  type: integer
+                  example: 8
+                fechaEntregaEstimada:
+                  type: string
+                  format: date
+                fechaSalida:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Orden de despacho creada exitosamente
+        '400':
+          description: Datos inválidos o restricciones de negocio no cumplidas
+
+  /ordenes-despacho/{id}:
+    get:
+      tags:
+        - Órdenes de Despacho
+      summary: Obtener orden por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orden obtenida
+        '404':
+          description: Orden no encontrada
+
+    put:
+      tags:
+        - Órdenes de Despacho
+      summary: Actualizar orden
+      description: Solo DESPACHADOR y ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                origen:
+                  type: string
+                destino:
+                  type: string
+                pesoCarga:
+                  type: number
+                  format: double
+      responses:
+        '200':
+          description: Orden actualizada
+
+    delete:
+      tags:
+        - Órdenes de Despacho
+      summary: Eliminar orden
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orden eliminada
+
+  /ordenes-despacho/{id}/estado:
+    patch:
+      tags:
+        - Órdenes de Despacho
+      summary: Cambiar estado del viaje
+      description: CONDUCTOR y DESPACHADOR pueden cambiar el estado de una orden
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - estado
+              properties:
+                estado:
+                  type: string
+                  enum: [DESPACHADO, EN_RUTA, CERCA_DEL_DESTINO, ENTREGADO, CANCELADO]
+                  example: EN_RUTA
+      responses:
+        '200':
+          description: Estado actualizado exitosamente
+        '400':
+          description: Estado inválido
+
+  /ordenes-despacho/conductor/{id}:
+    get:
+      tags:
+        - Órdenes de Despacho
+      summary: Listar órdenes de un conductor
+      description: Accesible por ADMINISTRADOR, DESPACHADOR y CONDUCTOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID del conductor
+      responses:
+        '200':
+          description: Órdenes del conductor obtenidas
+
+  # ==================== ENTREGAS (HU-06 a HU-08) ====================
+  /entregas:
+    get:
+      tags:
+        - Entregas
+      summary: Listar entregas
+      description: Accesible por ADMINISTRADOR, DESPACHADOR, CLIENTE y AUDITOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Entregas obtenidas exitosamente
+
+  /entregas/{id}:
+    get:
+      tags:
+        - Entregas
+      summary: Obtener entrega por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Entrega obtenida
+        '404':
+          description: Entrega no encontrada
+
+    delete:
+      tags:
+        - Entregas
+      summary: Eliminar entrega
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Entrega eliminada
+
+  /entregas/{ordenId}/registrar:
+    post:
+      tags:
+        - Entregas
+      summary: Registrar entrega con firma digital
+      description: |
+        Solo CONDUCTOR. Finaliza un viaje registrando la entrega.
+        Puede incluir firma digital del cliente en formato base64.
+      parameters:
+        - in: path
+          name: ordenId
+          required: true
+          schema:
+            type: integer
+          description: ID de la orden de despacho
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fechaEntrega
+              properties:
+                fechaEntrega:
+                  type: string
+                  format: date
+                  example: '2026-05-12'
+                firmaDigital:
+                  type: string
+                  description: Firma del cliente en formato base64
+                  example: 'data:image/png;base64,ivBORw0KGgoAAAANSU...'
+                observaciones:
+                  type: string
+                  example: Entrega sin novedad
+      responses:
+        '201':
+          description: Entrega registrada exitosamente
+        '400':
+          description: Datos inválidos
+
+  # ==================== INCIDENTES (HU-09) ====================
+  /incidentes:
+    get:
+      tags:
+        - Incidentes
+      summary: Listar incidentes
+      description: Accesible por ADMINISTRADOR, DESPACHADOR y AUDITOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Incidentes obtenidos exitosamente
+
+  /incidentes/{id}:
+    get:
+      tags:
+        - Incidentes
+      summary: Obtener incidente por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Incidente obtenido
+        '404':
+          description: Incidente no encontrado
+
+    delete:
+      tags:
+        - Incidentes
+      summary: Eliminar incidente
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Incidente eliminado
+
+  /incidentes/{ordenId}/reportar:
+    post:
+      tags:
+        - Incidentes
+      summary: Reportar incidente en ruta
+      description: Solo CONDUCTOR. Reporta un choque, falla mecánica u otro incidente durante un viaje.
+      parameters:
+        - in: path
+          name: ordenId
+          required: true
+          schema:
+            type: integer
+          description: ID de la orden de despacho
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tipo
+                - descripcion
+                - fecha
+              properties:
+                tipo:
+                  type: string
+                  example: FALLA_MECANICA
+                  description: Tipo de incidente
+                descripcion:
+                  type: string
+                  example: Se pinchó una llanta en la vía
+                fecha:
+                  type: string
+                  format: date
+                  example: '2026-05-12'
+                nivelGravedad:
+                  type: string
+                  enum: [BAJO, MEDIO, ALTO, CRITICO]
+                  example: ALTO
+      responses:
+        '201':
+          description: Incidente reportado exitosamente
+        '400':
+          description: Datos inválidos
 
   # ==================== DOCUMENTOS VEHICULARES (HU-15) ====================
   /documentos-vehiculares/alertas:
@@ -1441,3 +2369,552 @@ paths:
       responses:
         '200':
           description: Todas las notificaciones marcadas como leídas
+
+  # ==================== PLANES DE MANTENIMIENTO (HU-02) ====================
+  /planes-mantenimiento:
+    get:
+      tags:
+        - Planes de Mantenimiento
+      summary: Listar planes de mantenimiento
+      description: Accesible por ADMINISTRADOR y JEFE_TALLER
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Planes obtenidos exitosamente
+
+    post:
+      tags:
+        - Planes de Mantenimiento
+      summary: Crear plan de mantenimiento
+      description: Solo ADMINISTRADOR y JEFE_TALLER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nombre
+                - tipoVehiculo
+                - vehiculoId
+              properties:
+                nombre:
+                  type: string
+                  example: Mantenimiento preventivo trimestral
+                tipoVehiculo:
+                  type: string
+                  enum: [CAMION_CARGA_PESADA, TURBO, CAMIONETA]
+                  example: CAMION_CARGA_PESADA
+                vehiculoId:
+                  type: integer
+                  example: 2
+                descripcion:
+                  type: string
+                  example: Cambio de aceite, revisión de frenos y suspensión
+                frecuenciaKm:
+                  type: integer
+                  example: 15000
+                frecuenciaDias:
+                  type: integer
+                  example: 90
+      responses:
+        '201':
+          description: Plan creado exitosamente
+        '400':
+          description: Datos inválidos
+
+  /planes-mantenimiento/{id}:
+    get:
+      tags:
+        - Planes de Mantenimiento
+      summary: Obtener plan por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plan obtenido
+        '404':
+          description: Plan no encontrado
+
+    put:
+      tags:
+        - Planes de Mantenimiento
+      summary: Actualizar plan
+      description: Solo ADMINISTRADOR y JEFE_TALLER
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                tipoVehiculo:
+                  type: string
+                  enum: [CAMION_CARGA_PESADA, TURBO, CAMIONETA]
+      responses:
+        '200':
+          description: Plan actualizado
+
+    delete:
+      tags:
+        - Planes de Mantenimiento
+      summary: Eliminar plan
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plan eliminado
+
+  # ==================== ÓRDENES DE TRABAJO (HU-02) ====================
+  /ordenes-trabajo:
+    get:
+      tags:
+        - Órdenes de Trabajo
+      summary: Listar órdenes de trabajo
+      description: Accesible por ADMINISTRADOR, JEFE_TALLER y AUDITOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Órdenes de trabajo obtenidas
+
+    post:
+      tags:
+        - Órdenes de Trabajo
+      summary: Crear orden de trabajo
+      description: Solo JEFE_TALLER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - descripcion
+                - fechaApertura
+              properties:
+                descripcion:
+                  type: string
+                  example: Reparación de transmisión del vehículo TRK-900
+                fechaApertura:
+                  type: string
+                  format: date
+                  example: '2026-05-13'
+                vehiculoId:
+                  type: integer
+                  example: 2
+                planDeMantenimientoId:
+                  type: integer
+                  example: 1
+      responses:
+        '201':
+          description: Orden de trabajo creada
+        '400':
+          description: Datos inválidos
+
+  /ordenes-trabajo/{id}:
+    get:
+      tags:
+        - Órdenes de Trabajo
+      summary: Obtener orden de trabajo por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orden de trabajo obtenida
+        '404':
+          description: Orden de trabajo no encontrada
+
+    put:
+      tags:
+        - Órdenes de Trabajo
+      summary: Actualizar orden de trabajo
+      description: Solo JEFE_TALLER. Puede cambiar el estado de la orden.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado:
+                  type: string
+                  enum: [ABIERTA, EN_PROCESO, CERRADA, CANCELADA]
+                descripcion:
+                  type: string
+      responses:
+        '200':
+          description: Orden de trabajo actualizada
+
+    delete:
+      tags:
+        - Órdenes de Trabajo
+      summary: Eliminar orden de trabajo
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orden de trabajo eliminada
+
+  # ==================== REPUESTOS (HU-12) ====================
+  /repuestos/stock-bajo:
+    get:
+      tags:
+        - Repuestos
+      summary: Listar repuestos con stock bajo
+      description: Devuelve repuestos cuyo stock actual está por debajo del mínimo configurado. Accesible por ADMINISTRADOR, JEFE_TALLER y GESTOR_INVENTARIO.
+      responses:
+        '200':
+          description: Repuestos con stock bajo obtenidos
+
+  /repuestos:
+    get:
+      tags:
+        - Repuestos
+      summary: Listar repuestos
+      description: Accesible por ADMINISTRADOR, JEFE_TALLER y GESTOR_INVENTARIO
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Repuestos obtenidos exitosamente
+
+    post:
+      tags:
+        - Repuestos
+      summary: Crear repuesto
+      description: Solo GESTOR_INVENTARIO y ADMINISTRADOR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nombre
+                - stockMinimo
+                - unidadMedida
+                - precio
+              properties:
+                nombre:
+                  type: string
+                  example: Filtro de aceite motor
+                stockMinimo:
+                  type: integer
+                  example: 5
+                  description: Stock mínimo antes de alerta (>= 0)
+                unidadMedida:
+                  type: string
+                  example: unidad
+                precio:
+                  type: number
+                  format: double
+                  example: 45000
+                  description: Precio unitario (debe ser > 0)
+                stockActual:
+                  type: integer
+                  example: 20
+                descripcion:
+                  type: string
+                  example: Compatible con motores diésel Cummins ISX
+      responses:
+        '201':
+          description: Repuesto creado exitosamente
+        '400':
+          description: Datos inválidos
+
+  /repuestos/{id}:
+    get:
+      tags:
+        - Repuestos
+      summary: Obtener repuesto por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Repuesto obtenido
+        '404':
+          description: Repuesto no encontrado
+
+    put:
+      tags:
+        - Repuestos
+      summary: Actualizar repuesto
+      description: Solo GESTOR_INVENTARIO y ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                stockMinimo:
+                  type: integer
+                precio:
+                  type: number
+                  format: double
+      responses:
+        '200':
+          description: Repuesto actualizado
+
+    delete:
+      tags:
+        - Repuestos
+      summary: Eliminar repuesto
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Repuesto eliminado
+
+  # ==================== REPORTES (HU-14) ====================
+  /reportes:
+    get:
+      tags:
+        - Reportes
+      summary: Listar reportes generados
+      description: Accesible por ADMINISTRADOR, DESPACHADOR y AUDITOR
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Reportes obtenidos exitosamente
+
+  /reportes/combustible:
+    get:
+      tags:
+        - Reportes
+      summary: Reporte de consumo de combustible
+      description: Genera un reporte analítico del consumo de combustible por vehículo y período
+      responses:
+        '200':
+          description: Reporte de combustible generado
+
+  /reportes/rutas-rentables:
+    get:
+      tags:
+        - Reportes
+      summary: Reporte de rutas más rentables
+      description: Analiza las rutas más rentables según ingresos vs costos operativos
+      responses:
+        '200':
+          description: Reporte de rutas rentables generado
+
+  /reportes/cumplimiento-entregas:
+    get:
+      tags:
+        - Reportes
+      summary: Reporte de cumplimiento de entregas
+      description: Muestra el porcentaje de entregas a tiempo vs retrasadas
+      responses:
+        '200':
+          description: Reporte de cumplimiento generado
+
+  /reportes/{id}:
+    get:
+      tags:
+        - Reportes
+      summary: Obtener reporte por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reporte obtenido
+        '404':
+          description: Reporte no encontrado
+
+    delete:
+      tags:
+        - Reportes
+      summary: Eliminar reporte
+      description: Solo ADMINISTRADOR
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reporte eliminado
+
+  /reportes/generar:
+    post:
+      tags:
+        - Reportes
+      summary: Generar reporte
+      description: Solo ADMINISTRADOR y DESPACHADOR. Genera un reporte en formato JSON, CSV o PDF.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tipo
+              properties:
+                tipo:
+                  type: string
+                  enum: [COMBUSTIBLE, RUTAS_RENTABLES, CUMPLIMIENTO_ENTREGAS, MANTENIMIENTO, INVENTARIO]
+                  example: COMBUSTIBLE
+                formato:
+                  type: string
+                  enum: [JSON, CSV, PDF]
+                  example: PDF
+                  default: JSON
+                fechaInicio:
+                  type: string
+                  format: date
+                  example: '2026-01-01'
+                fechaFin:
+                  type: string
+                  format: date
+                  example: '2026-05-13'
+      responses:
+        '201':
+          description: Reporte generado exitosamente
+        '400':
+          description: Tipo o formato inválido
+
+  # ==================== MANIFIESTOS (HU-04) ====================
+  /manifiestos/{ordenId}:
+    get:
+      tags:
+        - Manifiestos
+      summary: Generar manifiesto de carga
+      description: |
+        Accesible por ADMINISTRADOR, DESPACHADOR y AUDITOR.
+        Genera el documento de manifiesto de carga asociado a una orden de despacho.
+        El manifiesto incluye datos del vehículo, conductor, cliente, origen, destino y peso.
+      parameters:
+        - in: path
+          name: ordenId
+          required: true
+          schema:
+            type: integer
+          description: ID de la orden de despacho
+      responses:
+        '200':
+          description: Manifiesto generado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      ordenId:
+                        type: integer
+                      conductor:
+                        type: string
+                      vehiculo:
+                        type: string
+                      placa:
+                        type: string
+                      cliente:
+                        type: string
+                      origen:
+                        type: string
+                      destino:
+                        type: string
+                      pesoCarga:
+                        type: number
+                      fechaSalida:
+                        type: string
+                      estado:
+                        type: string
+        '404':
+          description: Orden de despacho no encontrada

@@ -54,6 +54,10 @@ security:
 tags:
   - name: Autenticación
     description: Endpoints de autenticación y registro
+  - name: Clientes
+    description: Gestión de clientes y consulta de envíos (HU-13)
+  - name: Notificaciones
+    description: Sistema de notificaciones automáticas (HU-13)
   - name: Documentos Vehiculares
     description: Gestión de documentos de vehículos (HU-15)
   - name: Consumo de Combustible
@@ -1229,3 +1233,211 @@ paths:
       responses:
         '200':
           description: Comentarios agregados exitosamente
+
+  # ==================== CLIENTES Y NOTIFICACIONES (HU-13) ====================
+  /clientes:
+    get:
+      tags:
+        - Clientes
+      summary: Listar clientes
+      description: Obtiene lista paginada de clientes
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Clientes obtenidos exitosamente
+
+    post:
+      tags:
+        - Clientes
+      summary: Crear cliente
+      description: Registra un nuevo cliente en el sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nombre
+                - nit
+                - telefono
+                - correo
+              properties:
+                nombre:
+                  type: string
+                  example: Empresa ABC S.A.S.
+                nit:
+                  type: string
+                  example: '900123456-7'
+                telefono:
+                  type: string
+                  example: '+573001234567'
+                correo:
+                  type: string
+                  format: email
+                  example: contacto@empresaabc.com
+                direccion:
+                  type: string
+                  example: Calle 123 #45-67, Bogotá
+      responses:
+        '201':
+          description: Cliente creado exitosamente
+
+  /clientes/{id}:
+    get:
+      tags:
+        - Clientes
+      summary: Obtener cliente por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cliente obtenido
+        '404':
+          description: Cliente no encontrado
+
+    put:
+      tags:
+        - Clientes
+      summary: Actualizar cliente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Cliente actualizado
+
+    delete:
+      tags:
+        - Clientes
+      summary: Eliminar cliente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cliente eliminado
+
+  /clientes/{id}/envios:
+    get:
+      tags:
+        - Clientes
+      summary: Consultar envíos de un cliente
+      description: |
+        Permite al cliente consultar el estado de sus envíos.
+        Devuelve todas las órdenes de despacho asociadas al cliente.
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID del cliente
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [DESPACHADO, EN_RUTA, CERCA_DEL_DESTINO, ENTREGADO, CANCELADO]
+          description: Filtrar por estado del envío
+      responses:
+        '200':
+          description: Envíos obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Envíos del cliente obtenidos
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        origen:
+                          type: string
+                        destino:
+                          type: string
+                        estado:
+                          type: string
+                        fechaEstimadaEntrega:
+                          type: string
+                          format: date-time
+                        descripcionCarga:
+                          type: string
+                        pesoCarga:
+                          type: number
+
+  /notificaciones:
+    get:
+      tags:
+        - Notificaciones
+      summary: Listar notificaciones del usuario autenticado
+      description: Obtiene las notificaciones del usuario actual
+      parameters:
+        - in: query
+          name: leida
+          schema:
+            type: boolean
+          description: Filtrar por notificaciones leídas/no leídas
+      responses:
+        '200':
+          description: Notificaciones obtenidas exitosamente
+
+  /notificaciones/{id}/marcar-leida:
+    patch:
+      tags:
+        - Notificaciones
+      summary: Marcar notificación como leída
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notificación marcada como leída
+
+  /notificaciones/marcar-todas-leidas:
+    patch:
+      tags:
+        - Notificaciones
+      summary: Marcar todas las notificaciones como leídas
+      description: Marca todas las notificaciones del usuario autenticado como leídas
+      responses:
+        '200':
+          description: Todas las notificaciones marcadas como leídas

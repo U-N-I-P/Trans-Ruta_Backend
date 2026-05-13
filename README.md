@@ -10,12 +10,13 @@ Sistema de gestión logística y transporte de carga — Backend API REST.
 - **ORM:** Sequelize
 - **Autenticación:** JWT
 - **Validaciones:** express-validator
+- **Package manager:** pnpm
 
 ## Instalación
 
 ```bash
 # 1. Instalar dependencias
-npm install
+pnpm install
 
 # 2. Configurar variables de entorno
 cp .env.example .env
@@ -25,25 +26,25 @@ cp .env.example .env
 # CREATE DATABASE trans_ruta_db;
 
 # 4. Ejecutar migraciones
-npm run db:migrate
+pnpm run db:migrate
 
 # 5. Ejecutar seeders (crea admin + datos de ejemplo)
-npm run db:seed
+pnpm run db:seed
 
 # 6. Iniciar servidor en desarrollo
-npm run dev
+pnpm run dev
 ```
 
 ## Scripts Disponibles
 
-| Script | Descripción |
-|--------|-------------|
-| `npm start` | Iniciar en producción |
-| `npm run dev` | Iniciar con nodemon (desarrollo) |
-| `npm run db:migrate` | Ejecutar migraciones |
-| `npm run db:migrate:undo` | Revertir migraciones |
-| `npm run db:seed` | Ejecutar seeders |
-| `npm run db:reset` | Reset completo (undo + migrate + seed) |
+| Script                       | Descripción                           |
+| ---------------------------- | -------------------------------------- |
+| `pnpm start`               | Iniciar en producción                 |
+| `pnpm run dev`             | Iniciar con nodemon (desarrollo)       |
+| `pnpm run db:migrate`      | Ejecutar migraciones                   |
+| `pnpm run db:migrate:undo` | Revertir migraciones                   |
+| `pnpm run db:seed`         | Ejecutar seeders                       |
+| `pnpm run db:reset`        | Reset completo (undo + migrate + seed) |
 
 ## Credenciales por Defecto
 
@@ -64,24 +65,24 @@ Authorization: Bearer <token>
 
 ## Endpoints Principales
 
-| Recurso | Ruta Base |
-|---------|-----------|
-| Auth | `/api/v1/auth` |
-| Usuarios | `/api/v1/usuarios` |
-| Vehículos | `/api/v1/vehiculos` |
-| Conductores | `/api/v1/conductores` |
-| Clientes | `/api/v1/clientes` |
-| Viáticos | `/api/v1/viaticos` |
-| Órdenes de Despacho | `/api/v1/ordenes-despacho` |
-| Entregas | `/api/v1/entregas` |
-| Incidentes | `/api/v1/incidentes` |
+| Recurso              | Ruta Base                        |
+| -------------------- | -------------------------------- |
+| Auth                 | `/api/v1/auth`                 |
+| Usuarios             | `/api/v1/usuarios`             |
+| Vehículos           | `/api/v1/vehiculos`            |
+| Conductores          | `/api/v1/conductores`          |
+| Clientes             | `/api/v1/clientes`             |
+| Viáticos            | `/api/v1/viaticos`             |
+| Órdenes de Despacho | `/api/v1/ordenes-despacho`     |
+| Entregas             | `/api/v1/entregas`             |
+| Incidentes           | `/api/v1/incidentes`           |
 | Planes Mantenimiento | `/api/v1/planes-mantenimiento` |
-| Órdenes de Trabajo | `/api/v1/ordenes-trabajo` |
-| Repuestos | `/api/v1/repuestos` |
-| Solicitudes Compra | `/api/v1/solicitudes-compra` |
-| Notificaciones | `/api/v1/notificaciones` |
-| Reportes | `/api/v1/reportes` |
-| Manifiestos | `/api/v1/manifiestos` |
+| Órdenes de Trabajo  | `/api/v1/ordenes-trabajo`      |
+| Repuestos            | `/api/v1/repuestos`            |
+| Solicitudes Compra   | `/api/v1/solicitudes-compra`   |
+| Notificaciones       | `/api/v1/notificaciones`       |
+| Reportes             | `/api/v1/reportes`             |
+| Manifiestos          | `/api/v1/manifiestos`          |
 
 ## Roles del Sistema
 

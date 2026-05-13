@@ -15,31 +15,9 @@ async function obtenerSugerencias(req, res, next) {
   try {
     const { pesoCarga, origen, destino, limite } = req.query;
 
-    // Validar parámetros requeridos
-    if (!pesoCarga || !origen || !destino) {
-      const err = new Error('Parámetros requeridos: pesoCarga, origen, destino');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    // Validar que pesoCarga sea un número positivo
+    // Las validaciones ya se hicieron en el validator
     const peso = parseFloat(pesoCarga);
-    if (isNaN(peso) || peso <= 0) {
-      const err = new Error('El peso de la carga debe ser un número positivo');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    // Validar límite si se proporciona
-    let limiteNumerico = 5; // Valor por defecto
-    if (limite) {
-      limiteNumerico = parseInt(limite, 10);
-      if (isNaN(limiteNumerico) || limiteNumerico < 1 || limiteNumerico > 20) {
-        const err = new Error('El límite debe ser un número entre 1 y 20');
-        err.statusCode = 400;
-        throw err;
-      }
-    }
+    const limiteNumerico = limite ? parseInt(limite, 10) : 5;
 
     const data = await service.obtenerSugerencias(
       peso,

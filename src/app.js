@@ -24,19 +24,26 @@ if (env.nodeEnv === 'development') {
 // 4. Cargar modelos y asociaciones
 require('./models');
 
-// 5. Rutas
+// 5. Swagger Documentation
+const { setupSwagger } = require('./config/swagger.config');
+setupSwagger(app);
+
+// 6. Rutas
 const routes = require('./routes');
 app.use('/api/v1', routes);
 app.get('/', (_req, res) => {
-  res.json({ message: 'Trans-Ruta API v1 funcionando' });
+  res.json({ 
+    message: 'Trans-Ruta API v1 funcionando',
+    documentation: '/api-docs'
+  });
 });
 
-// 6. Middleware 404
+// 7. Middleware 404
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada' });
 });
 
-// 7. Manejador global de errores
+// 8. Manejador global de errores
 const errorHandler = require('./middlewares/error.middleware');
 app.use(errorHandler);
 

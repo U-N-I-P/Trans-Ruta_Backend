@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trans-Ruta API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.0/swagger-ui.css">
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .topbar {
+            background-color: #1a1a2e !important;
+        }
+        .swagger-ui .topbar .download-url-wrapper {
+            display: none;
+        }
+        .swagger-ui .info .title {
+            color: #16213e;
+        }
+        .swagger-ui .scheme-container {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .custom-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .custom-banner h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        .custom-banner p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="custom-banner">
+        <h1>🚛 Trans-Ruta API</h1>
+        <p>Sistema de Gestión Logística y Transporte de Carga</p>
+    </div>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "/api-docs/swagger.yaml",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                requestInterceptor: (request) => {
+                    // Agregar token automáticamente si existe en localStorage
+                    const token = localStorage.getItem('trans_ruta_token');
+                    if (token && !request.url.includes('/auth/login')) {
+                        request.headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    return request;
+                },
+                responseInterceptor: (response) => {
+                    // Guardar token automáticamente después del login
+                    if (response.url.includes('/auth/login') && response.status === 200) {
+                        try {
+                            const data = JSON.parse(response.text);
+                            if (data.success && data.data && data.data.token) {
+                                const token = data.data.token;
+                                localStorage.setItem('trans_ruta_token', token);
+                                
+                                // Autorizar automáticamente en Swagger UI
+                                ui.preauthorizeApiKey('bearerAuth', `Bearer ${token}`);
+                                
+                                // Mostrar notificación
+                                console.log('✅ Token guardado y autorización aplicada automáticamente');
+                                
+                                // Opcional: Mostrar alerta visual
+                                setTimeout(() => {
+                                    alert('✅ Sesión iniciada correctamente. El token se aplicó automáticamente a todas las peticiones.');
+                                }, 100);
+                            }
+                        } catch (e) {
+                            console.error('Error al procesar respuesta de login:', e);
+                        }
+                    }
+                    
+                    // Limpiar token después del logout
+                    if (response.url.includes('/auth/logout') && response.status === 200) {
+                        localStorage.removeItem('trans_ruta_token');
+                        console.log('✅ Token eliminado. Sesión cerrada.');
+                        setTimeout(() => {
+                            alert('✅ Sesión cerrada correctamente.');
+                        }, 100);
+                    }
+                    
+                    return response;
+                },
+                onComplete: () => {
+                    // Aplicar token guardado al cargar la página
+                    const token = localStorage.getItem('trans_ruta_token');
+                    if (token) {
+                        ui.preauthorizeApiKey('bearerAuth', `Bearer ${token}`);
+                        console.log('✅ Token cargado desde localStorage');
+                    }
+                }
+            });
+
+            window.ui = ui;
+        };
+    </script>
+</body>
+</html>

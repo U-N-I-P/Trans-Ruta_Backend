@@ -37,6 +37,28 @@ const SolicitudDeCompra = sequelize.define('SolicitudDeCompra', {
     allowNull: false,
     references: { model: 'repuestos', key: 'id' },
   },
+  montoTotal: {
+    type: DataTypes.DOUBLE,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  aprobadorId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'usuarios', key: 'id' },
+  },
+  fechaAprobacion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  comentariosAprobacion: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  fechaRecepcion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   tableName: 'solicitudes_de_compra',
   timestamps: true,

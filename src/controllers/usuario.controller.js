@@ -4,6 +4,7 @@
  */
 const service = require('../services/usuario.service');
 const { success } = require('../utils/response.helper');
+const { buildAuditContext } = require('../utils/audit.util');
 
 async function findAll(req, res, next) {
   try {
@@ -21,21 +22,21 @@ async function findById(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const data = await service.create(req.body);
+    const data = await service.create(req.body, buildAuditContext(req));
     return success(res, 'Usuario creado', data, 201);
   } catch (err) { next(err); }
 }
 
 async function update(req, res, next) {
   try {
-    const data = await service.update(req.params.id, req.body);
+    const data = await service.update(req.params.id, req.body, buildAuditContext(req));
     return success(res, 'Usuario actualizado', data);
   } catch (err) { next(err); }
 }
 
 async function remove(req, res, next) {
   try {
-    await service.remove(req.params.id);
+    await service.remove(req.params.id, buildAuditContext(req));
     return success(res, 'Usuario eliminado');
   } catch (err) { next(err); }
 }

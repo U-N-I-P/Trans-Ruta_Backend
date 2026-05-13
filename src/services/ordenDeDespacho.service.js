@@ -4,6 +4,7 @@
  */
 const { OrdenDeDespacho, Conductor, Vehiculo, Cliente, Entrega, DocumentoVehicular } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
+const { registrarAuditoria } = require('./auditoria.service');
 
 /**
  * Genera código automático OD-YYYYMMDD-XXXX
@@ -62,7 +63,7 @@ async function findByConductor(conductorId) {
   });
 }
 
-async function create(data) {
+async function create(data, auditCtx) {
   // Verificar que el vehículo esté disponible
   const vehiculo = await Vehiculo.findByPk(data.vehiculoId);
   if (!vehiculo) {
@@ -122,12 +123,52 @@ async function create(data) {
   data.fechaCreacion = new Date().toISOString().split('T')[0];
 
   const orden = await OrdenDeDespacho.create(data);
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'CREATE',
+      entidad: 'OrdenDeDespacho',
+      entidadId: orden.id,
+      datosAnteriores: null,
+      datosNuevos: orden.get({ plain: true }),
+    });
+  }
   return orden;
 }
 
-async function update(id, data) {
+async function update(id, data, auditCtx) {
   const orden = await findById(id);
+  const antes = orden.get({ plain: true });
+  const assignmentChanged =
+    (data.conductorId != null && Number(data.conductorId) !== Number(antes.conductorId)) ||
+    (data.vehiculoId != null && Number(data.vehiculoId) !== Number(antes.vehiculoId));
+
   await orden.update(data);
+  await orden.reload();
+
+  if (auditCtx) {
+    const despues = orden.get({ plain: true });
+    const accion = assignmentChanged ? 'ASSIGN' : 'UPDATE';
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion,
+      entidad: 'OrdenDeDespacho',
+      entidadId: orden.id,
+      datosAnteriores: accion === 'UPDATE' ? antes : null,
+      datosNuevos:
+        accion === 'ASSIGN'
+          ? {
+              conductorIdAnterior: antes.conductorId,
+              vehiculoIdAnterior: antes.vehiculoId,
+              conductorIdNuevo: despues.conductorId,
+              vehiculoIdNuevo: despues.vehiculoId,
+            }
+          : despues,
+    });
+  }
+
   return orden;
 }
 
@@ -137,8 +178,9 @@ async function update(id, data) {
  * @param {string} nuevoEstado
  * @returns {Promise<object>}
  */
-async function cambiarEstado(id, nuevoEstado) {
+async function cambiarEstado(id, nuevoEstado, auditCtx) {
   const orden = await findById(id);
+  const estadoAnterior = orden.estado;
 
   // Si se marca como ENTREGADO, verificar que exista una Entrega
   if (nuevoEstado === 'ENTREGADO') {
@@ -151,11 +193,37 @@ async function cambiarEstado(id, nuevoEstado) {
   }
 
   await orden.update({ estado: nuevoEstado });
+  await orden.reload();
+
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'UPDATE',
+      entidad: 'OrdenDeDespacho',
+      entidadId: orden.id,
+      datosAnteriores: { estado: estadoAnterior },
+      datosNuevos: { estado: orden.estado },
+    });
+  }
+
   return orden;
 }
 
-async function remove(id) {
+async function remove(id, auditCtx) {
   const orden = await findById(id);
+  const snapshot = orden.get({ plain: true });
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'DELETE',
+      entidad: 'OrdenDeDespacho',
+      entidadId: orden.id,
+      datosAnteriores: null,
+      datosNuevos: snapshot,
+    });
+  }
   await orden.destroy();
 }
 

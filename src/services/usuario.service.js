@@ -5,6 +5,7 @@
 const bcrypt = require('bcryptjs');
 const { Usuario } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
+const { registrarAuditoria } = require('./auditoria.service');
 
 /**
  * @param {object} query - req.query
@@ -39,10 +40,21 @@ async function findById(id) {
  * @param {object} data
  * @returns {Promise<object>}
  */
-async function create(data) {
+async function create(data, auditCtx) {
   data.contrasena = await bcrypt.hash(data.contrasena, 10);
   const usuario = await Usuario.create(data);
   const { contrasena, ...result } = usuario.toJSON();
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'CREATE',
+      entidad: 'Usuario',
+      entidadId: usuario.id,
+      datosAnteriores: null,
+      datosNuevos: result,
+    });
+  }
   return result;
 }
 
@@ -51,13 +63,31 @@ async function create(data) {
  * @param {object} data
  * @returns {Promise<object>}
  */
-async function update(id, data) {
-  const usuario = await findById(id);
+async function update(id, data, auditCtx) {
+  const usuario = await Usuario.findByPk(id, { attributes: { exclude: ['contrasena'] } });
+  if (!usuario) {
+    const err = new Error('Usuario no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+  const antes = usuario.get({ plain: true });
   if (data.contrasena) {
     data.contrasena = await bcrypt.hash(data.contrasena, 10);
   }
   await usuario.update(data);
-  const { contrasena, ...result } = usuario.toJSON();
+  const refreshed = await Usuario.findByPk(id, { attributes: { exclude: ['contrasena'] } });
+  const result = refreshed.get({ plain: true });
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'UPDATE',
+      entidad: 'Usuario',
+      entidadId: id,
+      datosAnteriores: antes,
+      datosNuevos: result,
+    });
+  }
   return result;
 }
 
@@ -65,8 +95,25 @@ async function update(id, data) {
  * @param {number} id
  * @returns {Promise<void>}
  */
-async function remove(id) {
-  const usuario = await findById(id);
+async function remove(id, auditCtx) {
+  const usuario = await Usuario.findByPk(id, { attributes: { exclude: ['contrasena'] } });
+  if (!usuario) {
+    const err = new Error('Usuario no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+  const snapshot = usuario.get({ plain: true });
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'DELETE',
+      entidad: 'Usuario',
+      entidadId: id,
+      datosAnteriores: null,
+      datosNuevos: snapshot,
+    });
+  }
   await usuario.destroy();
 }
 

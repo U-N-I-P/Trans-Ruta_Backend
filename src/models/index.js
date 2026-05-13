@@ -83,6 +83,8 @@ OrdenDeTrabajo.belongsTo(Repuesto, { foreignKey: 'repuestoId', as: 'repuesto' })
 
 // ===== SolicitudDeCompra =====
 SolicitudDeCompra.belongsTo(Repuesto, { foreignKey: 'repuestoId', as: 'repuesto' });
+SolicitudDeCompra.belongsTo(Usuario, { foreignKey: 'aprobadorId', as: 'aprobador' });
+Usuario.hasMany(SolicitudDeCompra, { foreignKey: 'aprobadorId', as: 'solicitudesAprobadas' });
 
 // ===== Notificacion =====
 Notificacion.belongsTo(Cliente, { foreignKey: 'clienteId', as: 'cliente' });

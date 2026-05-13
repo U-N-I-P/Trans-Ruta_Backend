@@ -20,6 +20,8 @@
 13. [Sugerencias de Asignación](#-sugerencias-de-asignación-hu-20)
 14. [Evaluación de Conductores](#-evaluación-de-conductores-hu-21)
 15. [Roles y Permisos](#-roles-y-permisos)
+16. [Tips para el Frontend](#-tips-para-el-frontend)
+17. [Stack Tecnológico Frontend](#-stack-tecnológico-frontend)
 
 ---
 
@@ -95,8 +97,22 @@ export default api;
   }
   ```
 
-### Registro (`/auth/register`)
-* **Crear Cuenta:** `POST /auth/register`
+### Otros Endpoints de Autenticación
+
+* **Cerrar Sesión:** `POST /auth/logout`
+  *Cierra la sesión del usuario actual y registra el evento en auditoría.*
+
+* **Obtener Usuario Autenticado:** `GET /auth/me`
+  *Devuelve la información del usuario actualmente autenticado.*
+
+* **Refrescar Token:** `POST /auth/refresh`
+  *Genera un nuevo token JWT para el usuario autenticado.*
+
+### Gestión de Usuarios (`/usuarios`)
+
+**⚠️ Nota:** El sistema NO tiene registro público. Los usuarios son creados únicamente por el ADMINISTRADOR a través del módulo de gestión de usuarios.
+
+* **Crear Usuario:** `POST /usuarios` (Solo ADMINISTRADOR)
   ```json
   {
     "nombre": "María García",
@@ -106,12 +122,16 @@ export default api;
   }
   ```
 
+* **Listar Usuarios:** `GET /usuarios` (Solo ADMINISTRADOR)
+* **Actualizar Usuario:** `PUT /usuarios/:id` (Solo ADMINISTRADOR)
+* **Eliminar Usuario:** `DELETE /usuarios/:id` (Solo ADMINISTRADOR)
+
 **Roles Disponibles:**
-- `ADMINISTRADOR`: Acceso total
+- `ADMINISTRADOR`: Acceso total al sistema
 - `DESPACHADOR`: Gestión de órdenes y asignaciones
 - `CONDUCTOR`: Consulta de viajes y registro de gastos
-- `JEFE_TALLER`: Gestión de mantenimiento
-- `GESTOR_INVENTARIO`: Gestión de repuestos
+- `JEFE_TALLER`: Gestión de mantenimiento y órdenes de trabajo
+- `GESTOR_INVENTARIO`: Gestión de repuestos y solicitudes de compra
 - `AUDITOR`: Consulta de auditoría (solo lectura)
 
 ---
@@ -820,6 +840,80 @@ Implementar un sistema de notificaciones para:
 - ✅ Bajo rendimiento de combustible (mensaje en respuesta de POST)
 - ✅ Saldo bajo de viáticos (mensaje en respuesta de aprobar gasto)
 - ✅ Conductores con bajo desempeño (consultar evaluaciones)
+
+---
+
+## 🛠️ Stack Tecnológico Frontend
+
+El frontend de Trans-Ruta está construido con las siguientes tecnologías:
+
+### A. Estructura y Construcción
+- **Vite**: Build tool moderno y rápido para inicializar el proyecto
+- **Vite PWA Plugin**: Convierte la app en PWA para sincronización offline (crítico para conductores sin señal)
+
+### B. Framework, Enrutamiento y Estado
+- **React**: Framework principal
+- **React Router v7**: Manejo de rutas y navegación entre vistas (Login, Dashboard, Rutas activas, etc.)
+- **Zustand**: Gestión de estado global del cliente (sesión de usuario, preferencias de UI)
+- **Axios**: Cliente HTTP para comunicación con el backend
+- **React Query (TanStack Query)**: Gestión de estado del servidor — cache, sincronización y actualizaciones optimistas
+
+### C. Diseño e Interfaces (UI)
+Opciones recomendadas (elegir una):
+- **Material-UI (MUI)** o **Ant Design**: Componentes avanzados (tablas, modales, alertas) listos para usar — ideal para paneles administrativos
+- **Tailwind CSS**: Control total del diseño con clases utilitarias — opción más popular y flexible
+
+### D. Formularios y Validaciones
+- **React Hook Form**: Gestión eficiente de formularios pesados (crear vehículo, crear orden, reportar incidente) sin degradar el rendimiento
+- **Yup** o **Zod**: Validación en el frontend que hace match con las reglas de express-validator del backend
+
+### E. Librerías Específicas
+- **react-leaflet**: Mapas con OpenStreetMap para geolocalización (RNF3)
+- **react-signature-canvas**: Captura de firmas digitales con el dedo en entregas — guarda como base64 (RF8)
+
+### Consideraciones Importantes
+
+#### PWA y Sincronización Offline
+Los conductores frecuentemente pierden señal en ruta. La PWA permite:
+- Instalar la app en el teléfono
+- Guardar datos en caché cuando no hay internet
+- Sincronizar automáticamente cuando recuperan la conexión
+
+#### Separación de responsabilidades: Zustand vs React Query
+- **Zustand**: estado del *cliente* (quién está logueado, tema de la app, UI local)
+- **React Query**: estado del *servidor* (datos que vienen de la API — vehículos, órdenes, etc.)
+- No mezclarlos: no guardes datos de la API en Zustand.
+
+#### Validación Frontend-Backend
+Usar **Yup/Zod** en el frontend con las mismas reglas que **express-validator** en el backend para:
+- Validar antes de enviar (mejor UX)
+- Reducir peticiones inválidas al servidor
+- Mensajes de error consistentes
+
+#### Ejemplo de Integración con React Query
+```javascript
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from './api'; // Axios instance con interceptores
+
+// Listar vehículos con cache automático
+const useVehiculos = () => {
+  return useQuery({
+    queryKey: ['vehiculos'],
+    queryFn: () => api.get('/vehiculos').then(res => res.data),
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+  });
+};
+
+// Crear orden de despacho con invalidación de cache
+const useCrearOrden = () => {
+  return useMutation({
+    mutationFn: (data) => api.post('/ordenes-despacho', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['ordenes-despacho']);
+    },
+  });
+};
+```
 
 ---
 

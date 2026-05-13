@@ -4,8 +4,9 @@
  */
 const { Router } = require('express');
 const controller = require('../controllers/sugerencia.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
+const auth = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/roles.middleware');
+const { obtenerSugerenciasRules, validate } = require('../validators/sugerencia.validator');
 
 const router = Router();
 
@@ -17,8 +18,10 @@ const router = Router();
  */
 router.get(
   '/',
-  authenticate,
-  authorize(['ADMINISTRADOR', 'DESPACHADOR']),
+  auth,
+  authorize('ADMINISTRADOR', 'DESPACHADOR'),
+  obtenerSugerenciasRules,
+  validate,
   controller.obtenerSugerencias
 );
 

@@ -4,8 +4,17 @@
  */
 const { Router } = require('express');
 const controller = require('../controllers/evaluacion.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
+const auth = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/roles.middleware');
+const { validateConductorOwnership } = require('../middlewares/conductorOwnership.middleware');
+const {
+  generarEvaluacionesRules,
+  obtenerRankingRules,
+  obtenerEvaluacionConductorRules,
+  obtenerHistorialRules,
+  agregarComentariosRules,
+  validate,
+} = require('../validators/evaluacion.validator');
 
 const router = Router();
 
@@ -16,8 +25,10 @@ const router = Router();
  */
 router.post(
   '/generar',
-  authenticate,
-  authorize(['ADMINISTRADOR']),
+  auth,
+  authorize('ADMINISTRADOR'),
+  generarEvaluacionesRules,
+  validate,
   controller.generarEvaluaciones
 );
 
@@ -28,8 +39,10 @@ router.post(
  */
 router.get(
   '/ranking',
-  authenticate,
-  authorize(['ADMINISTRADOR']),
+  auth,
+  authorize('ADMINISTRADOR'),
+  obtenerRankingRules,
+  validate,
   controller.obtenerRanking
 );
 
@@ -40,7 +53,10 @@ router.get(
  */
 router.get(
   '/conductor/:conductorId/:periodo',
-  authenticate,
+  auth,
+  validateConductorOwnership,
+  obtenerEvaluacionConductorRules,
+  validate,
   controller.obtenerEvaluacionConductor
 );
 
@@ -51,7 +67,10 @@ router.get(
  */
 router.get(
   '/conductor/:conductorId/historial',
-  authenticate,
+  auth,
+  validateConductorOwnership,
+  obtenerHistorialRules,
+  validate,
   controller.obtenerHistorial
 );
 
@@ -62,8 +81,10 @@ router.get(
  */
 router.patch(
   '/:id/comentarios',
-  authenticate,
-  authorize(['ADMINISTRADOR']),
+  auth,
+  authorize('ADMINISTRADOR'),
+  agregarComentariosRules,
+  validate,
   controller.agregarComentarios
 );
 

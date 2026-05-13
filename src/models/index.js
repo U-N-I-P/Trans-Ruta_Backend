@@ -22,6 +22,7 @@ const DocumentoVehicular = require('./DocumentoVehicular');
 const ConsumoCombustible = require('./ConsumoCombustible');
 const GastoViatico = require('./GastoViatico');
 const AuditoriaLog = require('./AuditoriaLog');
+const EvaluacionConductor = require('./EvaluacionConductor');
 
 // ===== Usuario =====
 Usuario.hasMany(Conductor, { foreignKey: 'usuarioId', as: 'conductores' });
@@ -36,6 +37,10 @@ AuditoriaLog.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
 Conductor.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
 Conductor.hasMany(Viatico, { foreignKey: 'conductorId', as: 'viaticos' });
 Conductor.hasMany(OrdenDeDespacho, { foreignKey: 'conductorId', as: 'ordenesDeDespacho' });
+Conductor.hasMany(EvaluacionConductor, { foreignKey: 'conductorId', as: 'evaluaciones' });
+
+// ===== EvaluacionConductor =====
+EvaluacionConductor.belongsTo(Conductor, { foreignKey: 'conductorId', as: 'conductor' });
 
 // ===== Cliente =====
 Cliente.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
@@ -133,4 +138,5 @@ module.exports = {
   ConsumoCombustible,
   GastoViatico,
   AuditoriaLog,
+  EvaluacionConductor,
 };

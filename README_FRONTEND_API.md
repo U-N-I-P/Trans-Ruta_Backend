@@ -77,7 +77,7 @@ export default api;
   ```json
   {
     "correo": "admin@trans-ruta.com",
-    "contrasena": "Admin123!"
+    "contrasena": "Admin1234!"
   }
   ```
   **Respuesta:**
@@ -231,12 +231,13 @@ Si algo falla, el servidor les responderá con un código HTTP `400`, `401`, `40
 ## 🛣️ Épica 3: Operación en Ruta (HU-06 a HU-09)
 
 ### Entregas (`/entregas`)
-* **Finalizar Viaje con Firma:** `POST /entregas`
+* **Finalizar Viaje con Firma:** `POST /entregas/:ordenId/registrar`
+  *Solo CONDUCTOR. El `ordenId` va en la URL, no en el body.*
   ```json
   {
-    "ordenDeDespachoId": 3,
-    "fechaHoraEntrega": "2026-05-12T15:30:00Z",
-    "firmaDigital": "data:image/png;base64,ivBORw0KGgoAAAANSU..."
+    "fechaEntrega": "2026-05-12",
+    "firmaDigital": "data:image/png;base64,ivBORw0KGgoAAAANSU...",
+    "observaciones": "Entrega sin novedad"
   }
   ```
 
@@ -771,6 +772,7 @@ El sistema registra automáticamente:
 | **ADMINISTRADOR** | Acceso total a todos los módulos |
 | **DESPACHADOR** | Crear/editar órdenes de despacho, ver sugerencias de asignación |
 | **CONDUCTOR** | Ver sus viajes, registrar gastos, ver sus evaluaciones |
+| **CLIENTE** | Consultar estado de sus envíos y entregas |
 | **JEFE_TALLER** | Gestión de mantenimiento, órdenes de trabajo, solicitudes de compra |
 | **GESTOR_INVENTARIO** | Gestión de repuestos, solicitudes de compra, recepción de inventario |
 | **AUDITOR** | Solo lectura de logs de auditoría |

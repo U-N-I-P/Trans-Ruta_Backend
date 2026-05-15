@@ -3,6 +3,7 @@
  */
 const service = require('../services/incidente.service');
 const { success } = require('../utils/response.helper');
+const { buildAuditContext } = require('../utils/audit.util');
 
 async function findAll(req, res, next) {
   try {
@@ -25,6 +26,31 @@ async function reportar(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function update(req, res, next) {
+  try {
+    const data = await service.update(req.params.id, req.body, buildAuditContext(req));
+    return success(res, 'Incidente actualizado', data);
+  } catch (err) { next(err); }
+}
+
+async function cambiarEstado(req, res, next) {
+  try {
+    const data = await service.cambiarEstado(
+      req.params.id,
+      req.body.estado,
+      buildAuditContext(req),
+    );
+    return success(res, 'Estado del incidente actualizado', data);
+  } catch (err) { next(err); }
+}
+
+async function finalizar(req, res, next) {
+  try {
+    const data = await service.finalizar(req.params.id, buildAuditContext(req));
+    return success(res, 'Incidente finalizado', data);
+  } catch (err) { next(err); }
+}
+
 async function remove(req, res, next) {
   try {
     await service.remove(req.params.id);
@@ -32,4 +58,6 @@ async function remove(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { findAll, findById, reportar, remove };
+module.exports = {
+  findAll, findById, reportar, update, cambiarEstado, finalizar, remove,
+};

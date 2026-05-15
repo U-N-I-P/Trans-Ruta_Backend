@@ -19,6 +19,13 @@ async function findById(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function crearLibre(req, res, next) {
+  try {
+    const data = await service.crearLibre(req.body, buildAuditContext(req));
+    return success(res, 'Solicitud de compra creada', data, 201);
+  } catch (err) { next(err); }
+}
+
 async function crearPorRepuesto(req, res, next) {
   try {
     const data = await service.crearPorRepuesto(req.params.repuestoId, req.body, buildAuditContext(req));
@@ -70,11 +77,12 @@ async function findPendientes(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { 
-  findAll, 
-  findById, 
-  crearPorRepuesto, 
-  update, 
+module.exports = {
+  findAll,
+  findById,
+  crearLibre,
+  crearPorRepuesto,
+  update,
   remove,
   aprobar,
   rechazar,

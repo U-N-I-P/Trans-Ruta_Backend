@@ -1111,6 +1111,7 @@ paths:
       tags:
         - Incidentes
       summary: Obtener incidente por ID
+      description: Accesible por ADMINISTRADOR, DESPACHADOR y AUDITOR
       parameters:
         - in: path
           name: id
@@ -1120,6 +1121,56 @@ paths:
       responses:
         '200':
           description: Incidente obtenido
+        '404':
+          description: Incidente no encontrado
+
+    put:
+      tags:
+        - Incidentes
+      summary: Actualizar incidente
+      description: |
+        ADMINISTRADOR y DESPACHADOR. Edita tipo, descripción, fecha, coordenadas y protocolo.
+        No permite cambiar `estado` ni `ordenDeDespachoId`. Incidentes en estado CERRADO no son editables.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tipo:
+                  type: string
+                  enum: [ACCIDENTE, AVERIA, RETRASO, FALLA_MECANICA, CHOQUE, ROBO, CLIMATICO, OTRO]
+                  example: AVERIA
+                descripcion:
+                  type: string
+                  example: Llanta reemplazada en taller móvil
+                fecha:
+                  type: string
+                  format: date
+                  example: '2026-05-12'
+                latitud:
+                  type: number
+                  format: double
+                  nullable: true
+                longitud:
+                  type: number
+                  format: double
+                  nullable: true
+                protocoloActivado:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Incidente actualizado
+        '400':
+          description: Datos inválidos o incidente cerrado
         '404':
           description: Incidente no encontrado
 
@@ -1138,12 +1189,75 @@ paths:
         '200':
           description: Incidente eliminado
 
+  /incidentes/{id}/finalizar:
+    patch:
+      tags:
+        - Incidentes
+      summary: Finalizar incidente
+      description: |
+        ADMINISTRADOR y DESPACHADOR. Cambia el estado a CERRADO (atajo de cierre).
+        No acepta body. Si ya está CERRADO responde 400.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Incidente finalizado (estado CERRADO)
+        '400':
+          description: Transición inválida o incidente ya cerrado
+        '404':
+          description: Incidente no encontrado
+
+  /incidentes/{id}/estado:
+    patch:
+      tags:
+        - Incidentes
+      summary: Cambiar estado del incidente
+      description: |
+        ADMINISTRADOR y DESPACHADOR. Estados: ABIERTO, EN_PROCESO, RESUELTO, CERRADO.
+        Transiciones permitidas:
+        - ABIERTO → EN_PROCESO | RESUELTO | CERRADO
+        - EN_PROCESO → RESUELTO | CERRADO
+        - RESUELTO → CERRADO
+        - CERRADO → (ninguna)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - estado
+              properties:
+                estado:
+                  type: string
+                  enum: [ABIERTO, EN_PROCESO, RESUELTO, CERRADO]
+                  example: EN_PROCESO
+      responses:
+        '200':
+          description: Estado actualizado
+        '400':
+          description: Transición no permitida
+        '404':
+          description: Incidente no encontrado
+
   /incidentes/{ordenId}/reportar:
     post:
       tags:
         - Incidentes
       summary: Reportar incidente en ruta
-      description: Solo CONDUCTOR. Reporta un choque, falla mecánica u otro incidente durante un viaje.
+      description: |
+        CONDUCTOR y ADMINISTRADOR. Reporta un incidente vinculado a una orden de despacho.
+        El estado inicial es ABIERTO. Si `protocoloActivado` es true, se crea una notificación automática.
       parameters:
         - in: path
           name: ordenId
@@ -1164,8 +1278,8 @@ paths:
               properties:
                 tipo:
                   type: string
+                  enum: [ACCIDENTE, AVERIA, RETRASO, FALLA_MECANICA, CHOQUE, ROBO, CLIMATICO, OTRO]
                   example: FALLA_MECANICA
-                  description: Tipo de incidente
                 descripcion:
                   type: string
                   example: Se pinchó una llanta en la vía
@@ -1173,15 +1287,24 @@ paths:
                   type: string
                   format: date
                   example: '2026-05-12'
-                nivelGravedad:
-                  type: string
-                  enum: [BAJO, MEDIO, ALTO, CRITICO]
-                  example: ALTO
+                latitud:
+                  type: number
+                  format: double
+                  nullable: true
+                longitud:
+                  type: number
+                  format: double
+                  nullable: true
+                protocoloActivado:
+                  type: boolean
+                  default: false
       responses:
         '201':
           description: Incidente reportado exitosamente
         '400':
           description: Datos inválidos
+        '404':
+          description: Orden de despacho no encontrada
 
   # ==================== DOCUMENTOS VEHICULARES (HU-15) ====================
   /documentos-vehiculares/alertas:
@@ -1727,16 +1850,60 @@ paths:
         '200':
           description: Solicitudes pendientes obtenidas
 
+  /solicitudes-compra:
+    post:
+      tags:
+        - Solicitudes de Compra
+      summary: Crear solicitud con concepto libre
+      description: |
+        JEFE_TALLER y GESTOR_INVENTARIO. Compra sin repuesto de inventario.
+        Requiere `conceptoLibre` y `costoEstimado` manual.
+        - montoTotal = cantidad × costoEstimado
+        - Si monto ≤ $500,000 → APROBADA automáticamente
+        - Si monto > $500,000 → PENDIENTE
+        Al recibir, no actualiza inventario (repuestoId null).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - conceptoLibre
+                - cantidad
+                - costoEstimado
+              properties:
+                conceptoLibre:
+                  type: string
+                  example: Servicio de grúa para vehículo varado
+                cantidad:
+                  type: integer
+                  example: 1
+                costoEstimado:
+                  type: number
+                  format: double
+                  example: 850000
+                descripcion:
+                  type: string
+                  example: Grúa en vía Bogotá-Medellín
+                fecha:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Solicitud creada
+
   /solicitudes-compra/{repuestoId}:
     post:
       tags:
         - Solicitudes de Compra
-      summary: Crear solicitud de compra
+      summary: Crear solicitud vinculada a repuesto
       description: |
-        Crea una solicitud de compra. El sistema:
-        - Calcula el monto total automáticamente (cantidad * costoEstimado)
+        JEFE_TALLER y GESTOR_INVENTARIO. Crea una solicitud ligada al inventario.
+        - montoTotal = cantidad × (costoEstimado o precio del repuesto)
         - Si monto ≤ $500,000 → APROBADA automáticamente
-        - Si monto > $500,000 → PENDIENTE (requiere aprobación manual)
+        - Si monto > $500,000 → PENDIENTE
+        Al recibir, incrementa stock del repuesto.
       parameters:
         - in: path
           name: repuestoId
@@ -1751,7 +1918,6 @@ paths:
               type: object
               required:
                 - cantidad
-                - costoEstimado
               properties:
                 cantidad:
                   type: integer
@@ -1760,6 +1926,7 @@ paths:
                   type: number
                   format: double
                   example: 450000
+                  description: Opcional; si se omite, usa el precio del repuesto
                 descripcion:
                   type: string
                   example: Filtros de aceite para mantenimiento preventivo
@@ -1783,9 +1950,14 @@ paths:
                       estado:
                         type: string
                         example: APROBADA
-                        description: APROBADA (automática) o PENDIENTE (requiere aprobación)
                       montoTotal:
                         type: number
+                      repuestoId:
+                        type: integer
+                        nullable: true
+                      conceptoLibre:
+                        type: string
+                        nullable: true
                       comentariosAprobacion:
                         type: string
 

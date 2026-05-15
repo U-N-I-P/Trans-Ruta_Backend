@@ -6,7 +6,11 @@ const ctrl = require('../controllers/solicitudDeCompra.controller');
 const auth = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/roles.middleware');
 const validate = require('../middlewares/validate.middleware');
-const { createRules, updateRules } = require('../validators/solicitudDeCompra.validator');
+const {
+  createByRepuestoRules,
+  createLibreRules,
+  updateRules,
+} = require('../validators/solicitudDeCompra.validator');
 
 const router = Router();
 
@@ -18,8 +22,9 @@ router.patch('/:id/recibir', auth, authorize('GESTOR_INVENTARIO', 'ADMINISTRADOR
 
 // Rutas existentes
 router.get('/', auth, authorize('ADMINISTRADOR', 'GESTOR_INVENTARIO', 'JEFE_TALLER'), ctrl.findAll);
+router.post('/', auth, authorize('JEFE_TALLER', 'GESTOR_INVENTARIO'), createLibreRules, validate, ctrl.crearLibre);
 router.get('/:id', auth, authorize('ADMINISTRADOR', 'GESTOR_INVENTARIO', 'JEFE_TALLER'), ctrl.findById);
-router.post('/:repuestoId', auth, authorize('JEFE_TALLER', 'GESTOR_INVENTARIO'), createRules, validate, ctrl.crearPorRepuesto);
+router.post('/:repuestoId', auth, authorize('JEFE_TALLER', 'GESTOR_INVENTARIO'), createByRepuestoRules, validate, ctrl.crearPorRepuesto);
 router.put('/:id', auth, authorize('ADMINISTRADOR', 'GESTOR_INVENTARIO'), updateRules, validate, ctrl.update);
 router.delete('/:id', auth, authorize('ADMINISTRADOR'), ctrl.remove);
 

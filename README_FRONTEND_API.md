@@ -242,15 +242,52 @@ Si algo falla, el servidor les responderá con un código HTTP `400`, `401`, `40
   ```
 
 ### Incidentes (`/incidentes`)
-* **Reportar Choque/Falla:** `POST /incidentes`
+
+**Estados:** `ABIERTO` → `EN_PROCESO` → `RESUELTO` → `CERRADO` (con atajos permitidos; ver transiciones abajo).
+
+| Método | Ruta | Roles |
+|--------|------|-------|
+| GET | `/incidentes` | ADMINISTRADOR, DESPACHADOR, AUDITOR |
+| GET | `/incidentes/:id` | ADMINISTRADOR, DESPACHADOR, AUDITOR |
+| POST | `/incidentes/:ordenId/reportar` | CONDUCTOR, ADMINISTRADOR |
+| PUT | `/incidentes/:id` | ADMINISTRADOR, DESPACHADOR |
+| PATCH | `/incidentes/:id/estado` | ADMINISTRADOR, DESPACHADOR |
+| PATCH | `/incidentes/:id/finalizar` | ADMINISTRADOR, DESPACHADOR |
+| DELETE | `/incidentes/:id` | ADMINISTRADOR |
+
+* **Reportar incidente en ruta:** `POST /incidentes/:ordenId/reportar`
   ```json
   {
-    "ordenDeDespachoId": 3,
     "tipo": "FALLA_MECANICA",
     "descripcion": "Se pinchó una llanta",
-    "nivelGravedad": "ALTO"
+    "fecha": "2026-05-12",
+    "latitud": 4.65,
+    "longitud": -74.08,
+    "protocoloActivado": true
   }
   ```
+  Tipos válidos: `ACCIDENTE`, `AVERIA`, `RETRASO`, `FALLA_MECANICA`, `CHOQUE`, `ROBO`, `CLIMATICO`, `OTRO`. Estado inicial: `ABIERTO`.
+
+* **Editar incidente:** `PUT /incidentes/:id` (no enviar `estado` en el body)
+  ```json
+  {
+    "descripcion": "Llanta reemplazada en taller móvil",
+    "protocoloActivado": true
+  }
+  ```
+
+* **Cambiar estado:** `PATCH /incidentes/:id/estado`
+  ```json
+  { "estado": "EN_PROCESO" }
+  ```
+
+* **Finalizar (cerrar):** `PATCH /incidentes/:id/finalizar` — sin body; deja el incidente en `CERRADO`.
+
+**Transiciones permitidas:**
+- `ABIERTO` → `EN_PROCESO`, `RESUELTO`, `CERRADO`
+- `EN_PROCESO` → `RESUELTO`, `CERRADO`
+- `RESUELTO` → `CERRADO`
+- `CERRADO` → ninguna (no editable con PUT)
 
 ---
 
@@ -294,7 +331,18 @@ Si algo falla, el servidor les responderá con un código HTTP `400`, `401`, `40
 #### Flujo de Aprobación Automática
 El sistema aprueba automáticamente solicitudes con monto ≤ $500,000 COP. Las solicitudes con monto mayor requieren aprobación manual del ADMINISTRADOR.
 
-* **Crear Solicitud de Repuestos:** `POST /solicitudes-compra/:repuestoId`
+* **Crear con concepto libre (sin repuesto de inventario):** `POST /solicitudes-compra`
+  ```json
+  {
+    "conceptoLibre": "Servicio de grúa para vehículo varado",
+    "cantidad": 1,
+    "costoEstimado": 850000,
+    "descripcion": "Grúa en vía Bogotá-Medellín"
+  }
+  ```
+  `repuestoId` queda `null`. Al recibir (`PATCH .../recibir`) no se actualiza inventario.
+
+* **Crear vinculada a repuesto:** `POST /solicitudes-compra/:repuestoId`
   ```json
   {
     "cantidad": 5,
@@ -302,6 +350,7 @@ El sistema aprueba automáticamente solicitudes con monto ≤ $500,000 COP. Las 
     "descripcion": "Filtros de aceite para mantenimiento preventivo"
   }
   ```
+  Si omites `costoEstimado`, se usa el precio del repuesto. Al recibir, el stock del repuesto aumenta automáticamente.
   **Respuesta (Aprobación Automática):**
   ```json
   {

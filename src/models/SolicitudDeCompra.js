@@ -32,9 +32,13 @@ const SolicitudDeCompra = sequelize.define('SolicitudDeCompra', {
     type: DataTypes.DOUBLE,
     allowNull: true,
   },
+  conceptoLibre: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   repuestoId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: { model: 'repuestos', key: 'id' },
   },
   montoTotal: {

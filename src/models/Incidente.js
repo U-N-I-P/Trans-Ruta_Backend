@@ -36,6 +36,11 @@ const Incidente = sequelize.define('Incidente', {
     allowNull: false,
     defaultValue: false,
   },
+  estado: {
+    type: DataTypes.ENUM('ABIERTO', 'EN_PROCESO', 'RESUELTO', 'CERRADO'),
+    allowNull: false,
+    defaultValue: 'ABIERTO',
+  },
   ordenDeDespachoId: {
     type: DataTypes.INTEGER,
     allowNull: false,

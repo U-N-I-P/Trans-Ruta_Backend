@@ -38,11 +38,69 @@ async function findById(id) {
   return sol;
 }
 
+function prepararSolicitud(data, { repuesto, repuestoId, conceptoLibre }) {
+  const costoUnitario = data.costoEstimado ?? (repuesto ? repuesto.precio : null);
+  if (!costoUnitario || costoUnitario <= 0) {
+    const err = new Error('costoEstimado es requerido y debe ser mayor a 0');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const montoTotal = data.cantidad * costoUnitario;
+  const requiereAprobacion = montoTotal > MONTO_LIMITE_APROBACION;
+  const estado = requiereAprobacion ? 'PENDIENTE' : 'APROBADA';
+
+  const payload = {
+    cantidad: data.cantidad,
+    costoEstimado: costoUnitario,
+    montoTotal,
+    estado,
+    fecha: data.fecha || new Date().toISOString().split('T')[0],
+    descripcion: data.descripcion || conceptoLibre || (repuesto ? repuesto.nombre : null),
+    repuestoId: repuestoId ?? null,
+    conceptoLibre: conceptoLibre ?? null,
+  };
+
+  if (!requiereAprobacion) {
+    payload.fechaAprobacion = new Date();
+    payload.comentariosAprobacion =
+      'Aprobación automática: el monto total no supera el umbral de aprobación administrativa.';
+  }
+
+  return payload;
+}
+
+/**
+ * Crear solicitud con concepto libre (sin repuesto de inventario)
+ */
+async function crearLibre(data, auditCtx) {
+  const concepto = data.conceptoLibre?.trim();
+  if (!concepto) {
+    const err = new Error('conceptoLibre es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const payload = prepararSolicitud(data, { conceptoLibre: concepto });
+  const sol = await SolicitudDeCompra.create(payload);
+
+  if (auditCtx) {
+    await registrarAuditoria({
+      usuarioId: auditCtx.usuarioId,
+      ipAddress: auditCtx.ipAddress,
+      accion: 'CREATE',
+      entidad: 'SolicitudDeCompra',
+      entidadId: sol.id,
+      datosAnteriores: null,
+      datosNuevos: sol.get({ plain: true }),
+    });
+  }
+
+  return sol;
+}
+
 /**
  * Crear solicitud de compra vinculada a un repuesto
- * @param {number} repuestoId
- * @param {object} data
- * @returns {Promise<object>}
  */
 async function crearPorRepuesto(repuestoId, data, auditCtx) {
   const repuesto = await Repuesto.findByPk(repuestoId);
@@ -52,26 +110,9 @@ async function crearPorRepuesto(repuestoId, data, auditCtx) {
     throw err;
   }
 
-  // Calcular monto total
-  const montoTotal = data.cantidad * (data.costoEstimado || repuesto.precio || 0);
+  const payload = prepararSolicitud(data, { repuesto, repuestoId });
+  const sol = await SolicitudDeCompra.create(payload);
 
-  // Determinar si requiere aprobación
-  const requiereAprobacion = montoTotal > MONTO_LIMITE_APROBACION;
-  const estado = requiereAprobacion ? 'PENDIENTE' : 'APROBADA';
-
-  data.repuestoId = repuestoId;
-  data.fecha = data.fecha || new Date().toISOString().split('T')[0];
-  data.montoTotal = montoTotal;
-  data.estado = estado;
-  
-  // Si se aprueba automáticamente, registrar fecha y comentario
-  if (!requiereAprobacion) {
-    data.fechaAprobacion = new Date();
-    data.comentariosAprobacion = 'Aprobación automática: el monto total no supera el umbral de aprobación administrativa.';
-  }
-
-  const sol = await SolicitudDeCompra.create(data);
-  
   if (auditCtx) {
     await registrarAuditoria({
       usuarioId: auditCtx.usuarioId,
@@ -233,37 +274,47 @@ async function registrarRecepcion(id, auditCtx) {
   }
 
   const transaction = await sequelize.transaction();
-  
+
   try {
-    const repuesto = await Repuesto.findByPk(solicitud.repuestoId, { transaction });
     const antesSol = solicitud.get({ plain: true });
-    const antesRep = repuesto.get({ plain: true });
+    let inventarioAnterior;
 
-    // Actualizar inventario
-    await repuesto.update(
-      { stockActual: repuesto.stockActual + solicitud.cantidad },
-      { transaction }
-    );
+    if (solicitud.repuestoId) {
+      const repuesto = await Repuesto.findByPk(solicitud.repuestoId, { transaction });
+      if (!repuesto) {
+        const err = new Error('Repuesto asociado no encontrado');
+        err.statusCode = 404;
+        throw err;
+      }
+      inventarioAnterior = repuesto.stockActual;
+      await repuesto.update(
+        { stockActual: repuesto.stockActual + solicitud.cantidad },
+        { transaction },
+      );
+    }
 
-    // Marcar como recibida
     await solicitud.update(
       {
         estado: 'RECIBIDA',
         fechaRecepcion: new Date(),
       },
-      { transaction }
+      { transaction },
     );
 
     await transaction.commit();
-    
+
     await solicitud.reload({
       include: [
-        { model: Repuesto, as: 'repuesto' },
+        { model: Repuesto, as: 'repuesto', required: false },
         { model: Usuario, as: 'aprobador', attributes: ['id', 'nombre', 'correo'] },
       ],
     });
 
     if (auditCtx) {
+      const datosNuevos = solicitud.get({ plain: true });
+      if (inventarioAnterior !== undefined) {
+        datosNuevos.inventarioAnterior = inventarioAnterior;
+      }
       await registrarAuditoria({
         usuarioId: auditCtx.usuarioId,
         ipAddress: auditCtx.ipAddress,
@@ -271,10 +322,7 @@ async function registrarRecepcion(id, auditCtx) {
         entidad: 'SolicitudDeCompra',
         entidadId: solicitud.id,
         datosAnteriores: antesSol,
-        datosNuevos: {
-          ...solicitud.get({ plain: true }),
-          inventarioAnterior: antesRep.stockActual,
-        },
+        datosNuevos,
       });
     }
 
@@ -299,11 +347,12 @@ async function findPendientes() {
   });
 }
 
-module.exports = { 
-  findAll, 
-  findById, 
-  crearPorRepuesto, 
-  update, 
+module.exports = {
+  findAll,
+  findById,
+  crearLibre,
+  crearPorRepuesto,
+  update,
   remove,
   aprobar,
   rechazar,

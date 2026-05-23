@@ -12,6 +12,7 @@ const { createRules, updateRules } = require('../validators/conductor.validator'
 const router = Router();
 
 router.get('/licencias-por-vencer', auth, authorize('ADMINISTRADOR', 'DESPACHADOR'), ctrl.licenciasPorVencer);
+router.get('/horas-hoy', auth, authorize('ADMINISTRADOR', 'DESPACHADOR'), ctrl.horasHoy);
 router.get('/', auth, authorize('ADMINISTRADOR', 'DESPACHADOR'), ctrl.findAll);
 router.get('/:id', auth, authorize('ADMINISTRADOR', 'DESPACHADOR'), ctrl.findById);
 router.post('/', auth, authorize('ADMINISTRADOR'), createRules, validate, ctrl.create);

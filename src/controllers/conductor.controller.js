@@ -47,4 +47,11 @@ async function licenciasPorVencer(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { findAll, findById, create, update, remove, licenciasPorVencer };
+async function horasHoy(req, res, next) {
+  try {
+    const data = await service.horasHoy();
+    return success(res, 'Horas conducidas hoy por conductor', data);
+  } catch (err) { next(err); }
+}
+
+module.exports = { findAll, findById, create, update, remove, licenciasPorVencer, horasHoy };

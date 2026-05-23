@@ -93,4 +93,64 @@ async function licenciasPorVencer() {
   });
 }
 
-module.exports = { findAll, findById, create, update, remove, licenciasPorVencer };
+/**
+ * Horas conducidas hoy por cada conductor (basado en órdenes EN_RUTA o CERCA_DEL_DESTINO de hoy)
+ * @returns {Promise<Array>}
+ */
+async function horasHoy() {
+  const { OrdenDeDespacho } = require('../models');
+  const hoy = new Date().toISOString().split('T')[0];
+
+  const conductores = await Conductor.findAll({
+    include: [{ model: Usuario, as: 'usuario', attributes: ['id', 'nombre', 'correo'] }],
+    order: [['id', 'ASC']],
+  });
+
+  const ordenesHoy = await OrdenDeDespacho.findAll({
+    where: {
+      fechaSalida: hoy,
+      estado: ['EN_RUTA', 'CERCA_DEL_DESTINO', 'ENTREGADO'],
+    },
+    attributes: ['conductorId', 'fechaSalida', 'estado', 'createdAt', 'updatedAt'],
+  });
+
+  // Agrupar órdenes por conductor
+  const ordenesMap = {};
+  ordenesHoy.forEach((o) => {
+    const cid = o.conductorId;
+    if (!ordenesMap[cid]) ordenesMap[cid] = [];
+    ordenesMap[cid].push(o);
+  });
+
+  return conductores.map((c) => {
+    const json = c.toJSON();
+    const ordenesConductor = ordenesMap[c.id] || [];
+    // Estimamos 1 hora por orden activa de hoy como aproximación real
+    const horasConductorHoy = ordenesConductor.reduce((acc, o) => {
+      // Si la orden está ENTREGADO, sumamos según diferencia de timestamps
+      if (o.estado === 'ENTREGADO' && o.updatedAt && o.createdAt) {
+        const diffH = (new Date(o.updatedAt) - new Date(o.createdAt)) / (1000 * 60 * 60);
+        return acc + Math.min(diffH, 9); // máximo 9h por orden
+      }
+      // Si está EN_RUTA o CERCA, calculamos desde createdAt hasta ahora
+      if (o.createdAt) {
+        const diffH = (Date.now() - new Date(o.createdAt)) / (1000 * 60 * 60);
+        return acc + Math.min(diffH, 9);
+      }
+      return acc + 1;
+    }, 0);
+
+    json.horasHoy = parseFloat(horasConductorHoy.toFixed(2));
+    json.ordenesHoy = ordenesConductor.length;
+    json.disponible = ordenesConductor.filter(o => ['EN_RUTA', 'CERCA_DEL_DESTINO'].includes(o.estado)).length === 0;
+
+    const hoyDate = new Date();
+    const vencimiento = new Date(json.fechaVencimientoLicencia);
+    json.diasParaVencimiento = Math.ceil((vencimiento - hoyDate) / (1000 * 60 * 60 * 24));
+    json.licenciaVencida = json.diasParaVencimiento <= 0;
+
+    return json;
+  });
+}
+
+module.exports = { findAll, findById, create, update, remove, licenciasPorVencer, horasHoy };

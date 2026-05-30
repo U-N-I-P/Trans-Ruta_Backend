@@ -57,6 +57,10 @@ const AuditoriaLog = sequelize.define(
       allowNull: true,
       field: 'datos_nuevos',
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      field: 'created_at',
+    },
   },
   {
     tableName: 'auditoria_logs',

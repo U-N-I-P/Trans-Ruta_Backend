@@ -34,5 +34,6 @@ module.exports = {
     await queryInterface.removeColumn('solicitudes_de_compra', 'fecha_aprobacion');
     await queryInterface.removeColumn('solicitudes_de_compra', 'comentarios_aprobacion');
     await queryInterface.removeColumn('solicitudes_de_compra', 'fecha_recepcion');
+    await queryInterface.removeColumn('solicitudes_de_compra', 'monto_total');
   }
 };

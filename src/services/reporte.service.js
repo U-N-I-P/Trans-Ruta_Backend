@@ -4,8 +4,17 @@
  */
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
+const PDFDocument = require('pdfkit');
 const { Reporte, OrdenDeDespacho, Entrega, Vehiculo } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
+
+const REPORTE_TITULOS = {
+  COMBUSTIBLE: 'Reporte de Consumo de Combustible',
+  RUTAS_RENTABLES: 'Reporte de Rutas Más Rentables',
+  CUMPLIMIENTO_ENTREGAS: 'Reporte de Cumplimiento de Entregas',
+  MANTENIMIENTO: 'Reporte de Mantenimiento',
+  INVENTARIO: 'Reporte de Inventario',
+};
 
 async function findAll(query) {
   const { page, limit, offset } = getPagination(query);
@@ -139,4 +148,150 @@ async function remove(id) {
   await reporte.destroy();
 }
 
-module.exports = { findAll, findById, generar, reporteCombustible, reporteRutasRentables, reporteCumplimiento, remove };
+/**
+ * Da formato legible a un valor individual para mostrarlo en PDF/CSV.
+ * @param {*} value
+ * @returns {string}
+ */
+function formatValorReporte(value) {
+  if (value === null || value === undefined) return '—';
+  const str = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  // La fuente estándar de PDFKit (WinAnsi) no soporta ciertos símbolos Unicode
+  return str.replace(/→/g, '->');
+}
+
+/**
+ * Genera un PDF legible a partir del contenido (JSON) de un reporte.
+ * @param {object} reporte - instancia o JSON del Reporte
+ * @returns {Promise<Buffer>}
+ */
+function buildReportePdfBuffer(reporte) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('error', reject);
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+    const titulo = REPORTE_TITULOS[reporte.tipo] || `Reporte: ${reporte.tipo}`;
+    doc.fontSize(16).fillColor('#000').text('Trans-Ruta', { continued: false });
+    doc.fontSize(13).text(titulo, { underline: true });
+    doc.moveDown(0.3);
+
+    doc.fontSize(9).fillColor('#444');
+    doc.text(`Generado: ${new Date(reporte.fechaGeneracion).toLocaleDateString('es-CO')}`);
+    if (reporte.parametros) {
+      try {
+        const params = JSON.parse(reporte.parametros);
+        const paramsTexto = Object.entries(params).map(([k, v]) => `${k}: ${formatValorReporte(v)}`).join(', ');
+        if (paramsTexto) doc.text(`Parámetros: ${paramsTexto}`);
+      } catch {
+        // parámetros no son JSON válido, se ignoran en el PDF
+      }
+    }
+    doc.moveDown(1);
+    doc.fillColor('#000');
+
+    let contenido;
+    try {
+      contenido = reporte.contenido ? JSON.parse(reporte.contenido) : null;
+    } catch {
+      contenido = null;
+    }
+
+    const vacio = !contenido || (Array.isArray(contenido) && contenido.length === 0) || (typeof contenido === 'object' && Object.keys(contenido).length === 0);
+
+    if (vacio) {
+      doc.fontSize(11).text('No hay datos disponibles para los criterios seleccionados.');
+      doc.end();
+      return;
+    }
+
+    if (Array.isArray(contenido)) {
+      contenido.forEach((item, i) => {
+        doc.fontSize(10).fillColor('#000').text(`${i + 1}.`);
+        doc.fontSize(9).fillColor('#333');
+        Object.entries(item || {}).forEach(([campo, valor]) => {
+          doc.text(`   ${campo}: ${formatValorReporte(valor)}`);
+        });
+        doc.fillColor('#000');
+        if (i < contenido.length - 1) doc.moveDown(0.4);
+      });
+    } else {
+      Object.entries(contenido).forEach(([campo, valor]) => {
+        doc.fontSize(10).fillColor('#333').text(`${campo}: ${formatValorReporte(valor)}`);
+      });
+    }
+
+    doc.end();
+  });
+}
+
+/**
+ * Genera un CSV a partir del contenido (JSON) de un reporte.
+ * @param {object} reporte
+ * @returns {string}
+ */
+function buildReporteCsv(reporte) {
+  let contenido;
+  try {
+    contenido = reporte.contenido ? JSON.parse(reporte.contenido) : null;
+  } catch {
+    contenido = null;
+  }
+
+  if (!contenido) return '\uFEFFsin datos\r\n';
+
+  const filas = Array.isArray(contenido) ? contenido : [contenido];
+  if (filas.length === 0) return '\uFEFFsin datos\r\n';
+
+  const columnas = Array.from(
+    filas.reduce((acc, fila) => {
+      Object.keys(fila || {}).forEach((k) => acc.add(k));
+      return acc;
+    }, new Set())
+  );
+
+  const escapeCsvCell = (value) => {
+    if (value === null || value === undefined) return '';
+    const str = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+    return str;
+  };
+
+  const lineas = [columnas.join(',')];
+  filas.forEach((fila) => {
+    lineas.push(columnas.map((c) => escapeCsvCell(fila?.[c])).join(','));
+  });
+
+  return `\uFEFF${lineas.join('\r\n')}`;
+}
+
+/**
+ * Exporta un reporte existente como archivo descargable.
+ * @param {number|string} id
+ * @param {'pdf'|'csv'} formato
+ * @returns {Promise<{ body: Buffer|string, contentType: string, filename: string }>}
+ */
+async function exportar(id, formato) {
+  const reporte = await findById(id);
+  const fmt = formato === 'csv' ? 'csv' : 'pdf';
+  const base = `reporte-${reporte.tipo.toLowerCase().replace(/_/g, '-')}-${reporte.id}`;
+
+  if (fmt === 'csv') {
+    return {
+      body: buildReporteCsv(reporte),
+      contentType: 'text/csv; charset=utf-8',
+      filename: `${base}.csv`,
+    };
+  }
+
+  const buffer = await buildReportePdfBuffer(reporte);
+  return {
+    body: buffer,
+    contentType: 'application/pdf',
+    filename: `${base}.pdf`,
+  };
+}
+
+module.exports = { findAll, findById, generar, reporteCombustible, reporteRutasRentables, reporteCumplimiento, remove, exportar };

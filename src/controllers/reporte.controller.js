@@ -54,4 +54,19 @@ async function remove(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { findAll, findById, generar, combustible, rutasRentables, cumplimientoEntregas, remove };
+async function exportar(req, res, next) {
+  try {
+    const formato = (req.query.formato || 'pdf').toLowerCase();
+    if (formato !== 'pdf' && formato !== 'csv') {
+      const err = new Error('Parámetro formato inválido (use pdf o csv)');
+      err.statusCode = 400;
+      throw err;
+    }
+    const { body, contentType, filename } = await service.exportar(req.params.id, formato);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(body);
+  } catch (err) { next(err); }
+}
+
+module.exports = { findAll, findById, generar, combustible, rutasRentables, cumplimientoEntregas, remove, exportar };

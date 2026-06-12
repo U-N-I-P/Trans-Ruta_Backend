@@ -26,6 +26,14 @@ function validateEnv() {
 
 validateEnv();
 
+function parseCorsOrigins(value) {
+  const fallback = 'http://localhost:5173,http://localhost:5174';
+  return (value || fallback)
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 3000,
@@ -40,5 +48,5 @@ module.exports = {
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '8h',
   },
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  corsOrigins: parseCorsOrigins(process.env.CORS_ORIGIN),
 };

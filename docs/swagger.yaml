@@ -121,7 +121,7 @@ paths:
                 correo:
                   type: string
                   format: email
-                  example: admin@trans-ruta.com
+                  example: admin@transruta.com
                   description: Correo electrónico del usuario
                 contrasena:
                   type: string
@@ -160,7 +160,7 @@ paths:
                             example: Juan Pérez
                           correo:
                             type: string
-                            example: admin@trans-ruta.com
+                            example: admin@transruta.com
                           rol:
                             type: string
                             enum: [ADMINISTRADOR, DESPACHADOR, CONDUCTOR, JEFE_TALLER, GESTOR_INVENTARIO, AUDITOR]

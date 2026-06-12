@@ -5,7 +5,7 @@
   "main": "server.js",
   "packageManager": "pnpm@11.1.0",
   "scripts": {
-    "start": "pnpm run db:migrate && pnpm run db:seed && node server.js",
+    "start": "pnpm run db:migrate && node server.js",
     "dev": "nodemon server.js",
     "db:migrate": "pnpm exec sequelize-cli db:migrate",
     "db:migrate:undo": "pnpm exec sequelize-cli db:migrate:undo:all",

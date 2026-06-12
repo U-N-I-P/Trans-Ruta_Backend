@@ -15,6 +15,7 @@ router.get('/combustible', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'AUDI
 router.get('/rutas-rentables', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'AUDITOR'), ctrl.rutasRentables);
 router.get('/cumplimiento-entregas', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'AUDITOR'), ctrl.cumplimientoEntregas);
 router.get('/:id', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'AUDITOR'), ctrl.findById);
+router.get('/:id/exportar', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'AUDITOR'), ctrl.exportar);
 router.post('/generar', auth, authorize('ADMINISTRADOR', 'DESPACHADOR'), createRules, validate, ctrl.generar);
 router.delete('/:id', auth, authorize('ADMINISTRADOR'), ctrl.remove);
 

@@ -12,7 +12,7 @@ const router = Router();
 
 router.get('/', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'CLIENTE', 'AUDITOR'), ctrl.findAll);
 router.get('/:id', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'CLIENTE', 'AUDITOR'), ctrl.findById);
-router.post('/:ordenId/registrar', auth, authorize('CONDUCTOR'), createRules, validate, ctrl.registrar);
+router.post('/:ordenId/registrar', auth, authorize('ADMINISTRADOR', 'CONDUCTOR'), createRules, validate, ctrl.registrar);
 router.delete('/:id', auth, authorize('ADMINISTRADOR'), ctrl.remove);
 
 module.exports = router;

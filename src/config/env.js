@@ -27,6 +27,7 @@ function validateEnv() {
 validateEnv();
 
 function parseCorsOrigins(value) {
+  if (value === '*') return true; // Refleja el origen exacto permitiendo credentials
   const fallback = 'http://localhost:5173,http://localhost:5174';
   return (value || fallback)
     .split(',')

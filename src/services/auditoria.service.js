@@ -175,6 +175,54 @@ function buildCsv(rows) {
   return `\uFEFF${lines.join('\r\n')}`;
 }
 
+/**
+ * Formatea un valor individual para mostrarlo en el PDF de auditoría.
+ * @param {*} value
+ * @returns {string}
+ */
+function formatValor(value) {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+/**
+ * Construye un texto legible "campo: anterior → nuevo" comparando los
+ * objetos datosAnteriores y datosNuevos de un registro de auditoría.
+ * Si solo existe uno de los dos, lista sus campos directamente.
+ * @param {object|null} anterior
+ * @param {object|null} nuevo
+ * @returns {string[]} líneas listas para imprimir
+ */
+function formatCambios(anterior, nuevo) {
+  if (!anterior && !nuevo) return ['Sin datos adicionales.'];
+
+  // Solo creación (no hay estado anterior)
+  if (!anterior && nuevo) {
+    return Object.entries(nuevo).map(([campo, valor]) => `${campo}: ${formatValor(valor)}`);
+  }
+
+  // Solo eliminación (no hay estado nuevo)
+  if (anterior && !nuevo) {
+    return Object.entries(anterior).map(([campo, valor]) => `${campo} (eliminado): ${formatValor(valor)}`);
+  }
+
+  // Actualización: mostrar solo los campos que cambiaron
+  const campos = new Set([...Object.keys(anterior), ...Object.keys(nuevo)]);
+  const lineas = [];
+  campos.forEach((campo) => {
+    const valorAnterior = anterior[campo];
+    const valorNuevo = nuevo[campo];
+    const anteriorStr = formatValor(valorAnterior);
+    const nuevoStr = formatValor(valorNuevo);
+    if (anteriorStr !== nuevoStr) {
+      lineas.push(`${campo}: ${anteriorStr} → ${nuevoStr}`);
+    }
+  });
+
+  return lineas.length ? lineas : ['Sin cambios en los campos registrados.'];
+}
+
 function buildPdfBuffer(rows) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
@@ -205,10 +253,13 @@ function buildPdfBuffer(rows) {
       doc.text(
         `Usuario: ${u?.correo ?? plain.usuarioId} | IP: ${plain.ipAddress ?? '—'} | ${plain.createdAt ? new Date(plain.createdAt).toISOString() : ''}`
       );
-      const prev = plain.datosAnteriores ? JSON.stringify(plain.datosAnteriores).slice(0, 400) : '—';
-      const neu = plain.datosNuevos ? JSON.stringify(plain.datosNuevos).slice(0, 400) : '—';
-      doc.text(`Anterior: ${prev}`);
-      doc.text(`Nuevo: ${neu}`);
+      const lineasCambio = formatCambios(plain.datosAnteriores, plain.datosNuevos);
+      doc.fontSize(8).fillColor('#333');
+      lineasCambio.forEach((linea) => {
+        // Recortar líneas extremadamente largas para no romper el layout del PDF
+        const texto = linea.length > 300 ? `${linea.slice(0, 300)}…` : linea;
+        doc.text(`• ${texto}`);
+      });
       doc.fillColor('#000');
       if (i < rows.length - 1) doc.moveDown(0.6);
     });

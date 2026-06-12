@@ -8,10 +8,8 @@ info:
     email: backend@trans-ruta.com
 
 servers:
-  - url: http://localhost:3000/api/v1
-    description: Servidor de Desarrollo
-  - url: https://api.trans-ruta.com/api/v1
-    description: Servidor de Producción
+  - url: /api/v1
+    description: Servidor Actual (Auto-detectado)
 
 components:
   securitySchemes:

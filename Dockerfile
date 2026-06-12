@@ -1,5 +1,5 @@
 # Usa una imagen oficial de Node.js, ligera (Alpine)
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Instala pnpm globalmente
 RUN npm install -g pnpm@11.1.0

@@ -23,11 +23,9 @@ const ConsumoCombustible = require('./ConsumoCombustible');
 const GastoViatico = require('./GastoViatico');
 const AuditoriaLog = require('./AuditoriaLog');
 const EvaluacionConductor = require('./EvaluacionConductor');
+const Estudiante = require('./Estudiante');
 
 const Team = require('./Team');
-// NOTA para niye: Cuando sky termine y se integre la rama, descomenta la siguiente línea:
-// const Student = require('./Student');
-
 // ===== Usuario =====
 Usuario.hasMany(Conductor, { foreignKey: 'usuarioId', as: 'conductores' });
 Usuario.hasMany(Cliente, { foreignKey: 'usuarioId', as: 'clientes' });
@@ -122,10 +120,9 @@ PlanDeMantenimiento.belongsToMany(OrdenDeTrabajo, {
   as: 'ordenesDeTrabajo',
 });
 
-// ===== Team y Student =====
-// NOTA para niye: Cuando sky haya integrado el modelo Student, descomenta esto para activar la relación
-// Team.hasMany(Student, { foreignKey: 'teamId', as: 'students' });
-// Student.belongsTo(Team, { foreignKey: 'teamId', as: 'team' });
+// ===== Team y Estudiante =====
+Team.hasMany(Estudiante, { foreignKey: 'equipoId', as: 'estudiantes' });
+Estudiante.belongsTo(Team, { foreignKey: 'equipoId', as: 'team' });
 
 module.exports = {
   sequelize,
@@ -148,6 +145,6 @@ module.exports = {
   GastoViatico,
   AuditoriaLog,
   EvaluacionConductor,
+  Estudiante,
   Team,
-  // Student, // Descomentar cuando la rama de sky se integre
 };

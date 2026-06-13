@@ -28,6 +28,7 @@ router.use('/gastos-viaticos', require('./gastoViatico.routes'));
 router.use('/auditoria', require('./auditoria.routes'));
 router.use('/sugerencias', require('./sugerencia.routes'));
 router.use('/evaluaciones', require('./evaluacion.routes'));
+router.use('/estudiantes', require('./estudiante.routes'));
 router.use('/teams', require('./team.routes'));
 
 module.exports = router;

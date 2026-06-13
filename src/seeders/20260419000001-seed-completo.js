@@ -556,7 +556,7 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
-    ]);
+    ], { ignoreDuplicates: true });
 
     // ─────────────────────────────────────────────
     // 7. INCIDENTES (3 registros — distintos tipos)

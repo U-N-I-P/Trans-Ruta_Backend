@@ -25,6 +25,7 @@ const AuditoriaLog = require('./AuditoriaLog');
 const EvaluacionConductor = require('./EvaluacionConductor');
 const Estudiante = require('./Estudiante');
 
+const Team = require('./Team');
 // ===== Usuario =====
 Usuario.hasMany(Conductor, { foreignKey: 'usuarioId', as: 'conductores' });
 Usuario.hasMany(Cliente, { foreignKey: 'usuarioId', as: 'clientes' });
@@ -119,6 +120,10 @@ PlanDeMantenimiento.belongsToMany(OrdenDeTrabajo, {
   as: 'ordenesDeTrabajo',
 });
 
+// ===== Team y Estudiante =====
+Team.hasMany(Estudiante, { foreignKey: 'equipoId', as: 'estudiantes' });
+Estudiante.belongsTo(Team, { foreignKey: 'equipoId', as: 'team' });
+
 module.exports = {
   sequelize,
   Usuario,
@@ -141,4 +146,5 @@ module.exports = {
   AuditoriaLog,
   EvaluacionConductor,
   Estudiante,
+  Team,
 };

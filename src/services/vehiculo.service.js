@@ -36,4 +36,6 @@ async function remove(id) {
   await vehiculo.destroy();
 }
 
+
+
 module.exports = { findAll, findById, create, update, remove };

@@ -31,3 +31,11 @@ jobs:
       # Aquí irían pruebas unitarias o linters en el futuro si se agregan
       # - name: Ejecutar pruebas
       #   run: pnpm test
+
+      # OPCIONAL: Si deseas que GitHub Actions despliegue automáticamente a Render
+      # al hacer push a la rama main, puedes descomentar este paso y agregar
+      # el secreto RENDER_DEPLOY_HOOK_URL en la configuración de tu repositorio en GitHub.
+      # - name: Disparar Despliegue en Render
+      #   if: github.ref == 'refs/heads/main' && success()
+      #   run: |
+      #     curl -f "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

@@ -9,7 +9,7 @@ const Estudiante = sequelize.define('Estudiante', {
   },
   nombre: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   pin: {
     type: DataTypes.STRING(10),

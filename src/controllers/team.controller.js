@@ -72,8 +72,23 @@ const getTeamStudents = async (req, res) => {
   }
 };
 
+const getAllTeams = async (req, res) => {
+  try {
+    const teams = await Team.findAll({
+      include: [{
+        model: Estudiante,
+        as: 'estudiantes'
+      }]
+    });
+    return res.status(200).json(teams);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al obtener los equipos', details: error.message });
+  }
+};
+
 module.exports = {
   createTeam,
+  getAllTeams,
   addStudentToTeam,
   getTeamStudents,
 };

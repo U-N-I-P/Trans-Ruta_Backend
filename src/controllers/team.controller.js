@@ -1,4 +1,4 @@
-const { Team, Student } = require('../models');
+const { Team, Estudiante } = require('../models');
 
 const createTeam = async (req, res) => {
   try {
@@ -29,21 +29,21 @@ const addStudentToTeam = async (req, res) => {
     }
 
     // Buscar estudiante por PIN
-    const student = await Student.findOne({ where: { pin } });
-    if (!student) {
+    const estudiante = await Estudiante.findOne({ where: { pin } });
+    if (!estudiante) {
       return res.status(404).json({ error: 'Estudiante no encontrado con el PIN proporcionado' });
     }
 
     // Verificar si el estudiante ya pertenece a un equipo
-    if (student.teamId) {
+    if (estudiante.equipoId) {
       return res.status(400).json({ error: 'El estudiante ya pertenece a un equipo' });
     }
 
     // Asignar el estudiante al equipo
-    student.teamId = team.id;
-    await student.save();
+    estudiante.equipoId = team.id;
+    await estudiante.save();
 
-    return res.status(200).json({ message: 'Estudiante agregado al equipo exitosamente', student });
+    return res.status(200).json({ message: 'Estudiante agregado al equipo exitosamente', estudiante });
   } catch (error) {
     return res.status(500).json({ error: 'Error al agregar estudiante al equipo', details: error.message });
   }
@@ -56,8 +56,8 @@ const getTeamStudents = async (req, res) => {
     // Obtener equipo junto con sus estudiantes
     const team = await Team.findByPk(id, {
       include: [{
-        model: Student,
-        as: 'students' // Esto asume que la asociación en models/index.js se definirá con "as: 'students'"
+        model: Estudiante,
+        as: 'estudiantes'
       }]
     });
 
@@ -66,7 +66,7 @@ const getTeamStudents = async (req, res) => {
     }
 
     // Retornar los estudiantes del equipo (o un arreglo vacío si no hay)
-    return res.status(200).json(team.students || []);
+    return res.status(200).json(team.estudiantes || []);
   } catch (error) {
     return res.status(500).json({ error: 'Error al obtener estudiantes del equipo', details: error.message });
   }

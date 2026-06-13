@@ -23,6 +23,7 @@ const ConsumoCombustible = require('./ConsumoCombustible');
 const GastoViatico = require('./GastoViatico');
 const AuditoriaLog = require('./AuditoriaLog');
 const EvaluacionConductor = require('./EvaluacionConductor');
+const Estudiante = require('./Estudiante');
 
 // ===== Usuario =====
 Usuario.hasMany(Conductor, { foreignKey: 'usuarioId', as: 'conductores' });
@@ -139,4 +140,5 @@ module.exports = {
   GastoViatico,
   AuditoriaLog,
   EvaluacionConductor,
+  Estudiante,
 };

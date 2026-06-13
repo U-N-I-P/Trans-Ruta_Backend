@@ -2,7 +2,7 @@
  * @module services/ordenDeDespacho.service
  * @description Lógica de negocio para Órdenes de Despacho
  */
-const { OrdenDeDespacho, Conductor, Vehiculo, Cliente, Entrega, DocumentoVehicular } = require('../models');
+const { OrdenDeDespacho, Conductor, Vehiculo, Cliente, Entrega, DocumentoVehicular, Notificacion } = require('../models');
 const { getPagination, paginate } = require('../utils/pagination.helper');
 const { registrarAuditoria } = require('./auditoria.service');
 
@@ -194,6 +194,16 @@ async function cambiarEstado(id, nuevoEstado, auditCtx) {
 
   await orden.update({ estado: nuevoEstado });
   await orden.reload();
+
+  if (orden.clienteId) {
+    await Notificacion.create({
+      mensaje: `El estado de tu envío ${orden.codigo} cambió de ${estadoAnterior} a ${orden.estado}`,
+      fecha: new Date().toISOString().split('T')[0],
+      tipo: 'ESTADO_ENVIO',
+      destinatario: 'CLIENTE',
+      clienteId: orden.clienteId,
+    });
+  }
 
   if (auditCtx) {
     await registrarAuditoria({

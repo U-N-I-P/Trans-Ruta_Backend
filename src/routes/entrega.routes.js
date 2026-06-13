@@ -11,7 +11,7 @@ const { createRules } = require('../validators/entrega.validator');
 const router = Router();
 
 router.get('/', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'CLIENTE', 'AUDITOR'), ctrl.findAll);
-router.get('/:id', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'CLIENTE', 'AUDITOR'), ctrl.findById);
+router.get('/:id', auth, authorize('ADMINISTRADOR', 'DESPACHADOR', 'CLIENTE', 'AUDITOR', 'CONDUCTOR'), ctrl.findById);
 router.post('/:ordenId/registrar', auth, authorize('ADMINISTRADOR', 'CONDUCTOR'), createRules, validate, ctrl.registrar);
 router.delete('/:id', auth, authorize('ADMINISTRADOR'), ctrl.remove);
 

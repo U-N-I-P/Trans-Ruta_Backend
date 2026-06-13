@@ -39,5 +39,4 @@ async function remove(req, res, next) {
     return success(res, 'Vehículo eliminado');
   } catch (err) { next(err); }
 }
-
 module.exports = { findAll, findById, create, update, remove };
